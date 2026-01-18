@@ -1,0 +1,65 @@
+@* Hint popup component *@
+
+@if (IsVisible)
+{
+    <div class="overlay" @onclick="Close">
+        <div class="popup hint-popup" @onclick:stopPropagation="true">
+            @if (HintCards.Any())
+            {
+                <h3>Here's a hint!</h3>
+                <div class="hint-cards-container">
+                    @foreach (var card in HintCards)
+                    {
+                        <div class="hint-card">
+                            @for (int i = 0; i < card.Number; i++)
+                            {
+                                <svg viewBox="0 0 200 400" preserveAspectRatio="xMidYMid meet">
+                                    @if (card.Fill == "solid")
+                                    {
+                                        <use href="#@card.Shape" fill="@card.Color"></use>
+                                    }
+                                    else if (card.Fill == "striped")
+                                    {
+                                        <use href="#@card.Shape" fill="@card.Color" mask="url(#mask-stripe)"></use>
+                                        <use href="#@card.Shape" stroke="@card.Color" fill="none" stroke-width="19"></use>
+                                    }
+                                    else
+                                    {
+                                        <use href="#@card.Shape" fill="transparent" stroke="@card.Color" stroke-width="19"></use>
+                                    }
+                                </svg>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <h3>No sets available!</h3>
+                <p>There are no valid sets on the board right now.</p>
+            }
+            <div class="hint-buttons">
+                <button class="btn btn-primary" @onclick="Close">Got it!</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public List<Card> HintCards { get; set; } = new List<Card>();
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

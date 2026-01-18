@@ -1,0 +1,315 @@
+@page "/waiting/{RoomCode}"
+@inject IFirebaseService FirebaseService
+@inject IPlayerService PlayerService
+@inject IGameStateService GameStateService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Waiting Room - @RoomCode</PageTitle>
+
+<div class="main-container">
+    @if (isLoading)
+    {
+        <div class="waiting-room-container" style="text-align: center;">
+            <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 2rem auto;"></div>
+            <p>Loading room...</p>
+        </div>
+    }
+    else if (room == null)
+    {
+        <div class="waiting-room-container" style="text-align: center;">
+            <h2>Room Not Found</h2>
+            <p>This room may have expired or doesn't exist.</p>
+            <a href="/multiplayer" class="btn btn-primary" style="margin-top: 1rem;">Create New Room</a>
+        </div>
+    }
+    else
+    {
+        <div class="waiting-room-container">
+            <!-- Room Header -->
+            <div class="room-header">
+                <h1>M8LSET Waiting Room</h1>
+                <p class="margin-bottom-md">
+                    <strong>Your name:</strong>
+                    <span class="player-name-display">@currentPlayerName</span>
+                    <button @onclick="ShowChangeNamePopup" class="btn btn-outline btn-sm margin-left-xs">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit
+                    </button>
+                </p>
+                <div class="room-code-display">
+                    <span>Room Code:</span>
+                    <strong id="roomCode">@RoomCode</strong>
+                    <button @onclick="CopyRoomCode" class="btn btn-outline btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy Code
+                    </button>
+                </div>
+            </div>
+
+            <!-- Invite Section -->
+            <div class="invite-section">
+                <h3>Invite Your Friends</h3>
+                <p class="margin-bottom-sm text-secondary-color">
+                    Share this link with your friends so they can join your game!
+                </p>
+                <div class="invite-link-container">
+                    <input type="text" id="inviteLink" value="@GetInviteUrl()" readonly />
+                    <button @onclick="CopyInviteLink" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                        Copy Link
+                    </button>
+                </div>
+                <p class="invite-tip">Players can also join by entering the room code on the homepage</p>
+            </div>
+
+            <!-- Players Section -->
+            <div class="players-section">
+                <h3>Players in Room (@room.Players.Count/8)</h3>
+                <div class="players-list">
+                    @foreach (var player in room.Players)
+                    {
+                        <div class="player-item" data-player-id="@player.Id">
+                            <div>
+                                <span class="player-name">@player.Name</span>
+                                <div class="margin-bottom-xs">
+                                    @if (player.Id == currentPlayerId)
+                                    {
+                                        <span class="player-badge you">You</span>
+                                    }
+                                    @if (room.IsPlayerHost(player.Id))
+                                    {
+                                        <span class="player-badge host">Host</span>
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="secondary-color">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Waiting Actions -->
+            <div class="waiting-actions">
+                @if (isHost)
+                {
+                    <button @onclick="StartGame" class="btn-start" disabled="@(!canStartGame || isStarting)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        @(isStarting ? "Starting..." : "Start Game")
+                    </button>
+                    <p class="start-game-tip">You need at least 2 players to start the game</p>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-color">
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </div>
+                        <p class="waiting-message">Waiting for <strong>@hostName</strong> to start the game...</p>
+                    </div>
+                }
+
+                <a href="/" class="btn btn-outline">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Leave Room
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Connection Status -->
+<div class="connection-status">
+    <span class="status-indicator @(isConnected ? "connected" : "connecting")"></span>
+    <span class="status-text">@(isConnected ? "Connected" : "Connecting...")</span>
+</div>
+
+<ChangeNamePopup IsVisible="@showChangeNamePopup"
+                 CurrentName="@currentPlayerName"
+                 OnClose="@CloseChangeNamePopup"
+                 OnNameChanged="@OnNameChanged" />
+
+<style>
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string RoomCode { get; set; } = string.Empty;
+
+    private MultiplayerGame? room;
+    private string currentPlayerId = string.Empty;
+    private string currentPlayerName = string.Empty;
+    private bool isHost = false;
+    private string hostName = string.Empty;
+    private bool canStartGame = false;
+    private bool isLoading = true;
+    private bool isConnected = false;
+    private bool isStarting = false;
+    private bool showChangeNamePopup = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FirebaseService.InitializeAsync();
+        currentPlayerId = await PlayerService.GetPlayerId();
+        currentPlayerName = await PlayerService.GetPlayerName();
+
+        // Load initial room data
+        room = await FirebaseService.GetRoomAsync(RoomCode);
+
+        if (room != null)
+        {
+            // Subscribe to real-time updates
+            await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
+            isConnected = true;
+            UpdateRoomState();
+        }
+
+        isLoading = false;
+    }
+
+    private void OnRoomUpdated(MultiplayerGame? updatedRoom)
+    {
+        if (updatedRoom == null) return;
+
+        room = updatedRoom;
+        UpdateRoomState();
+
+        // Check if game has started
+        if (room.IsStarted)
+        {
+            Navigation.NavigateTo($"/play/{RoomCode}");
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateRoomState()
+    {
+        if (room == null) return;
+
+        isHost = room.IsPlayerHost(currentPlayerId);
+        canStartGame = room.Players.Count >= 2;
+
+        var host = room.GetHost();
+        hostName = host?.Name ?? "Host";
+
+        var currentPlayer = room.GetPlayer(currentPlayerId);
+        if (currentPlayer != null)
+        {
+            currentPlayerName = currentPlayer.Name;
+        }
+    }
+
+    private async Task StartGame()
+    {
+        if (room == null || !isHost || !canStartGame) return;
+
+        isStarting = true;
+        StateHasChanged();
+
+        try
+        {
+            room.IsStarted = true;
+            room.StartTime = DateTime.Now;
+            await FirebaseService.UpdateRoomAsync(RoomCode, room);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error starting game: {ex.Message}");
+            await JS.InvokeVoidAsync("GameInterop.showNotification", "Failed to start game", "error", 3000);
+            isStarting = false;
+        }
+    }
+
+    private async Task CopyRoomCode()
+    {
+        var success = await JS.InvokeAsync<bool>("GameInterop.copyToClipboard", RoomCode);
+        if (success)
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", "Room code copied!", "success", 2000);
+        }
+    }
+
+    private async Task CopyInviteLink()
+    {
+        var link = GetInviteUrl();
+        var success = await JS.InvokeAsync<bool>("GameInterop.copyToClipboard", link);
+        if (success)
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", "Invite link copied!", "success", 2000);
+        }
+    }
+
+    private string GetInviteUrl()
+    {
+        var baseUrl = Navigation.BaseUri.TrimEnd('/');
+        return $"{baseUrl}/join/{RoomCode}";
+    }
+
+    private void ShowChangeNamePopup()
+    {
+        showChangeNamePopup = true;
+    }
+
+    private void CloseChangeNamePopup()
+    {
+        showChangeNamePopup = false;
+    }
+
+    private async Task OnNameChanged(string newName)
+    {
+        if (room == null) return;
+
+        var player = room.GetPlayer(currentPlayerId);
+        if (player != null)
+        {
+            // Check if name is taken
+            var existingPlayer = room.Players.FirstOrDefault(p =>
+                p.Id != currentPlayerId &&
+                p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+
+            if (existingPlayer != null)
+            {
+                await JS.InvokeVoidAsync("GameInterop.showNotification", "This name is already taken", "error", 3000);
+                return;
+            }
+
+            player.Name = newName;
+            currentPlayerName = newName;
+            await PlayerService.SetPlayerName(newName);
+            await FirebaseService.UpdateRoomAsync(RoomCode, room);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await FirebaseService.UnsubscribeFromRoomAsync(RoomCode);
+    }
+}

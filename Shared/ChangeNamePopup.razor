@@ -1,0 +1,108 @@
+@* Change name popup component *@
+
+@if (IsVisible)
+{
+    <div class="overlay" @onclick="Close">
+        <div class="popup change-name-popup" @onclick:stopPropagation="true">
+            <h3>Change Your Name</h3>
+            <div class="change-name-content">
+                <p>Enter your new display name:</p>
+                <input type="text"
+                       @bind="newName"
+                       @bind:event="oninput"
+                       @onkeypress="HandleKeyPress"
+                       class="name-input"
+                       placeholder="Enter name"
+                       maxlength="20" />
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="name-error">@errorMessage</div>
+                }
+            </div>
+            <div class="change-name-buttons">
+                <button class="btn btn-outline" @onclick="Close">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveName" disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public string CurrentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnNameChanged { get; set; }
+
+    private string newName = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isSaving = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && string.IsNullOrEmpty(newName))
+        {
+            newName = CurrentName;
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SaveName();
+        }
+    }
+
+    private async Task SaveName()
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            errorMessage = "Name cannot be empty";
+            return;
+        }
+
+        var trimmedName = newName.Trim();
+        if (trimmedName.Length < 1 || trimmedName.Length > 20)
+        {
+            errorMessage = "Name must be between 1 and 20 characters";
+            return;
+        }
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            if (OnNameChanged.HasDelegate)
+            {
+                await OnNameChanged.InvokeAsync(trimmedName);
+            }
+            await Close();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        newName = string.Empty;
+        errorMessage = string.Empty;
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

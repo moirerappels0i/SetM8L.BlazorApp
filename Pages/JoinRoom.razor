@@ -1,0 +1,153 @@
+@page "/join/{RoomCode}"
+@inject IFirebaseService FirebaseService
+@inject IPlayerService PlayerService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Join Room - M8L Set GAME</PageTitle>
+
+<div class="main-container">
+    <div class="homepage-container">
+        <div class="homepage-hero">
+            <h1>Join Room @RoomCode</h1>
+            <p class="subtitle">Enter your name to join the game!</p>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="game-mode-card" style="text-align: center;">
+                <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                <p>@loadingMessage</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="game-mode-card" style="text-align: center;">
+                <h2>Unable to Join</h2>
+                <p class="error-message">@errorMessage</p>
+                <a href="/multiplayer" class="btn btn-primary" style="margin-top: 1rem;">Create Your Own Room</a>
+            </div>
+        }
+        else
+        {
+            <div class="game-mode-card" style="max-width: 400px; margin: 0 auto;">
+                <h2>Enter Your Name</h2>
+                <div class="change-name-content">
+                    <input type="text"
+                           @bind="playerName"
+                           @bind:event="oninput"
+                           @onkeypress="HandleKeyPress"
+                           class="name-input"
+                           placeholder="Enter your name"
+                           maxlength="20"
+                           autofocus />
+                </div>
+                <button @onclick="JoinGame" class="btn btn-primary btn-lg" style="width: 100%;" disabled="@isJoining">
+                    @(isJoining ? "Joining..." : "Join Game")
+                </button>
+            </div>
+        }
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/" class="btn btn-outline">Back to Home</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string RoomCode { get; set; } = string.Empty;
+
+    private string playerName = string.Empty;
+    private string errorMessage = string.Empty;
+    private string loadingMessage = "Checking room...";
+    private bool isLoading = true;
+    private bool isJoining = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FirebaseService.InitializeAsync();
+        playerName = await PlayerService.GetPlayerName();
+
+        // Check if room exists
+        var exists = await FirebaseService.RoomExistsAsync(RoomCode);
+        if (!exists)
+        {
+            errorMessage = "Room not found. It may have expired or the code is incorrect.";
+        }
+        else
+        {
+            var room = await FirebaseService.GetRoomAsync(RoomCode);
+            if (room != null && room.IsStarted)
+            {
+                errorMessage = "This game has already started.";
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await JoinGame();
+        }
+    }
+
+    private async Task JoinGame()
+    {
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            playerName = $"Player{new Random().Next(1000, 9999)}";
+        }
+
+        isJoining = true;
+        StateHasChanged();
+
+        try
+        {
+            await PlayerService.SetPlayerName(playerName.Trim());
+            var playerId = await PlayerService.GetPlayerId();
+
+            // Get current room state
+            var room = await FirebaseService.GetRoomAsync(RoomCode);
+            if (room == null)
+            {
+                errorMessage = "Room no longer exists.";
+                isJoining = false;
+                return;
+            }
+
+            // Check if player name is taken
+            var existingPlayer = room.Players.FirstOrDefault(p =>
+                p.Name.Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase) && p.Id != playerId);
+
+            string finalName = playerName.Trim();
+            if (existingPlayer != null)
+            {
+                finalName = $"{playerName.Trim()}{new Random().Next(100, 999)}";
+            }
+
+            // Add player to room
+            var player = new Player(playerId, finalName);
+            room.AddPlayer(player);
+            await FirebaseService.UpdateRoomAsync(RoomCode, room);
+
+            Navigation.NavigateTo($"/waiting/{RoomCode}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error joining room. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+            isJoining = false;
+        }
+    }
+}

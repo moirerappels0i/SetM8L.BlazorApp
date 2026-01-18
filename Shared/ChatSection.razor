@@ -1,0 +1,103 @@
+@* Chat/Game Log section component *@
+@inject IJSRuntime JS
+
+<div class="chat-section">
+    <div class="chat-header">
+        <h3>@Title</h3>
+    </div>
+    <div class="chat-log" id="chatLog">
+        @foreach (var entry in ChatEntries)
+        {
+            if (entry.Type == "set")
+            {
+                <div class="chat-entry">
+                    <div class="set-header">Set found by @(string.IsNullOrEmpty(entry.PlayerName) ? $"Player {entry.Player}" : entry.PlayerName)</div>
+                    <div class="set-cards">
+                        @foreach (var card in entry.Cards)
+                        {
+                            <CardDisplay Card="@card" Index="0" IsSmall="true" />
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="message-entry">
+                    <span class="message-author">@(string.IsNullOrEmpty(entry.PlayerName) ? $"Player {entry.Player}" : entry.PlayerName):</span>
+                    <span class="message-text">@entry.Message</span>
+                </div>
+            }
+        }
+    </div>
+    @if (ShowRemainingCards)
+    {
+        <div class="cards-remaining">@RemainingCards cards remaining in the deck</div>
+    }
+    @if (ShowChatInput)
+    {
+        <div class="chat-input-container">
+            <div class="chat-input-form">
+                <input type="text"
+                       @bind="messageText"
+                       @bind:event="oninput"
+                       @onkeypress="HandleKeyPress"
+                       class="chat-input"
+                       placeholder="@InputPlaceholder"
+                       maxlength="200" />
+                <button @onclick="SendMessage" class="btn btn-primary btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Game Log";
+
+    [Parameter]
+    public List<ChatEntry> ChatEntries { get; set; } = new List<ChatEntry>();
+
+    [Parameter]
+    public bool ShowRemainingCards { get; set; } = true;
+
+    [Parameter]
+    public int RemainingCards { get; set; }
+
+    [Parameter]
+    public bool ShowChatInput { get; set; } = true;
+
+    [Parameter]
+    public string InputPlaceholder { get; set; } = "Add a note...";
+
+    [Parameter]
+    public EventCallback<string> OnMessageSent { get; set; }
+
+    private string messageText = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("GameInterop.scrollChatToBottom", "chatLog");
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(messageText) && OnMessageSent.HasDelegate)
+        {
+            await OnMessageSent.InvokeAsync(messageText);
+            messageText = string.Empty;
+        }
+    }
+}

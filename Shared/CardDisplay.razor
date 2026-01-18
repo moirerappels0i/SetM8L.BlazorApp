@@ -1,0 +1,68 @@
+@* Reusable card display component *@
+
+<div class="@GetCardClass()" @onclick="OnCardClicked" data-index="@Index">
+    @for (int i = 0; i < Card.Number; i++)
+    {
+        <svg viewBox="0 0 200 400" preserveAspectRatio="xMidYMid meet">
+            @if (Card.Fill == "solid")
+            {
+                <use href="#@Card.Shape" fill="@Card.Color"></use>
+            }
+            else if (Card.Fill == "striped")
+            {
+                <use href="#@Card.Shape" fill="@Card.Color" mask="url(#mask-stripe)"></use>
+                <use href="#@Card.Shape" stroke="@Card.Color" fill="none" stroke-width="19"></use>
+            }
+            else
+            {
+                <use href="#@Card.Shape" fill="transparent" stroke="@Card.Color" stroke-width="19"></use>
+            }
+        </svg>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Card Card { get; set; } = new Card();
+
+    [Parameter]
+    public int Index { get; set; }
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool IsHinted { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnClick { get; set; }
+
+    [Parameter]
+    public bool IsSmall { get; set; } = false;
+
+    private string GetCardClass()
+    {
+        var classes = new List<string>();
+
+        if (IsSmall)
+        {
+            classes.Add("chat-card");
+        }
+        else
+        {
+            classes.Add("game-card");
+            if (IsSelected) classes.Add("selected");
+            if (IsHinted) classes.Add("assistant-selected");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private async Task OnCardClicked()
+    {
+        if (!IsSmall && OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Index);
+        }
+    }
+}

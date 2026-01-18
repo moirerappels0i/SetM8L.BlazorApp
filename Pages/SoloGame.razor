@@ -1,0 +1,326 @@
+@page "/solo"
+@inject IGameStateService GameStateService
+@inject ISharedGameService SharedGameService
+@inject IPlayerService PlayerService
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Solo Game - M8L Set GAME</PageTitle>
+
+<div class="main-container">
+    <!-- Game Header -->
+    <div class="game-header">
+        <div class="header-content">
+            <h1 class="game-title">M8LSET Solo Game</h1>
+            <div class="game-info">
+                <p><strong>Player:</strong> <span class="player-name-display">@playerName</span></p>
+                <p id="setStatus">@GetSetStatusMessage()</p>
+                <p><strong>Time:</strong> <span id="timer">@GetFormattedTime()</span></p>
+                <p><strong>Score:</strong> @game.Score</p>
+            </div>
+            <div class="game-options">
+                <button @onclick="ResetGame" class="btn btn-secondary btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                    </svg>
+                    Reset Game
+                </button>
+                <button @onclick="ShowHint" class="btn btn-outline btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    Show Set
+                </button>
+                <button @onclick="ShowThemePopup" class="btn btn-outline btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                    </svg>
+                    Theme
+                </button>
+                <button @onclick="ShowChangeNamePopup" class="btn btn-outline btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Change Name
+                </button>
+                <button @onclick="ToggleAssistiveMode" class="btn assistive-mode btn-sm @(assistiveModeEnabled ? "active" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    Assistive Mode: @(assistiveModeEnabled ? "ON" : "OFF")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Layout -->
+    <div class="game-layout">
+        <!-- Game Board Section -->
+        <div class="game-board-section">
+            <div class="board-container">
+                <div class="board" id="board">
+                    @for (int i = 0; i < game.VisibleCards.Count; i++)
+                    {
+                        var index = i;
+                        var card = game.VisibleCards[i];
+                        <CardDisplay Card="@card"
+                                     Index="@index"
+                                     IsSelected="@selectedIndices.Contains(index)"
+                                     IsHinted="@hintedIndices.Contains(index)"
+                                     OnClick="@OnCardClicked" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Sidebar -->
+        <div class="game-sidebar">
+            <ChatSection Title="Game Log"
+                         ChatEntries="@game.ChatLogEntries.OrderByDescending(e => e.Timestamp).ToList()"
+                         RemainingCards="@game.RemainingCards"
+                         ShowChatInput="true"
+                         InputPlaceholder="Add a note..."
+                         OnMessageSent="@AddChatMessage" />
+        </div>
+    </div>
+</div>
+
+<!-- Popups -->
+<ThemePopup IsVisible="@showThemePopup"
+            Theme="@game.Theme"
+            OnClose="@CloseThemePopup"
+            OnThemeChanged="@OnThemeChanged" />
+
+<HintPopup IsVisible="@showHintPopup"
+           HintCards="@hintCards"
+           OnClose="@CloseHintPopup" />
+
+<ChangeNamePopup IsVisible="@showChangeNamePopup"
+                 CurrentName="@playerName"
+                 OnClose="@CloseChangeNamePopup"
+                 OnNameChanged="@OnNameChanged" />
+
+<!-- Game Complete Popup -->
+@if (isGameComplete)
+{
+    <div class="overlay">
+        <div class="popup end-game-popup">
+            <h3>Game Complete!</h3>
+            <div class="game-end-message">No more sets available!</div>
+            <div class="game-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Sets Found:</span>
+                    <span class="stat-value">@game.Score</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Time:</span>
+                    <span class="stat-value">@GetFormattedTime()</span>
+                </div>
+            </div>
+            <div class="end-game-buttons">
+                <button class="btn btn-primary" @onclick="ResetGame">Play Again</button>
+                <a href="/" class="btn btn-outline">Home</a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Game game = new Game();
+    private string playerName = "Player";
+    private List<int> selectedIndices = new List<int>();
+    private List<int> hintedIndices = new List<int>();
+    private List<Card> hintCards = new List<Card>();
+    private bool assistiveModeEnabled = false;
+    private bool showThemePopup = false;
+    private bool showHintPopup = false;
+    private bool showChangeNamePopup = false;
+    private bool isGameComplete = false;
+    private System.Threading.Timer? timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        playerName = await PlayerService.GetPlayerName();
+        InitializeGame();
+        StartTimer();
+    }
+
+    private void InitializeGame()
+    {
+        game = GameStateService.CreateNewSoloGame();
+        selectedIndices.Clear();
+        hintedIndices.Clear();
+        isGameComplete = false;
+    }
+
+    private void StartTimer()
+    {
+        timer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+    }
+
+    private async Task OnCardClicked(int index)
+    {
+        if (isGameComplete) return;
+
+        if (selectedIndices.Contains(index))
+        {
+            selectedIndices.Remove(index);
+        }
+        else
+        {
+            selectedIndices.Add(index);
+        }
+
+        // Clear hints when selecting cards
+        hintedIndices.Clear();
+
+        if (selectedIndices.Count == 3)
+        {
+            await ValidateSelection();
+        }
+    }
+
+    private async Task ValidateSelection()
+    {
+        var (isValid, message, validatedCards) = GameStateService.ValidateSet(game, selectedIndices, playerName);
+
+        if (isValid)
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", "Valid set found! +1 point", "success", 2000);
+            CheckGameComplete();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", message, "error", 2000);
+        }
+
+        selectedIndices.Clear();
+
+        if (assistiveModeEnabled)
+        {
+            ShowAssistiveHint();
+        }
+    }
+
+    private void CheckGameComplete()
+    {
+        var availableSets = SharedGameService.FindAllSets(game.VisibleCards);
+        if (game.RemainingCards == 0 && availableSets.Count == 0)
+        {
+            isGameComplete = true;
+        }
+    }
+
+    private void ResetGame()
+    {
+        var currentTheme = game.Theme;
+        game = GameStateService.CreateNewSoloGame(currentTheme);
+        selectedIndices.Clear();
+        hintedIndices.Clear();
+        isGameComplete = false;
+    }
+
+    private void ShowHint()
+    {
+        hintCards = SharedGameService.GetHint(game.VisibleCards);
+        showHintPopup = true;
+    }
+
+    private void CloseHintPopup()
+    {
+        showHintPopup = false;
+    }
+
+    private void ShowThemePopup()
+    {
+        showThemePopup = true;
+    }
+
+    private void CloseThemePopup()
+    {
+        showThemePopup = false;
+    }
+
+    private void OnThemeChanged((string Type, int Index) change)
+    {
+        GameStateService.ChangeTheme(game, change.Type, change.Index);
+    }
+
+    private void ShowChangeNamePopup()
+    {
+        showChangeNamePopup = true;
+    }
+
+    private void CloseChangeNamePopup()
+    {
+        showChangeNamePopup = false;
+    }
+
+    private async Task OnNameChanged(string newName)
+    {
+        playerName = newName;
+        await PlayerService.SetPlayerName(newName);
+    }
+
+    private void ToggleAssistiveMode()
+    {
+        assistiveModeEnabled = !assistiveModeEnabled;
+        if (assistiveModeEnabled)
+        {
+            ShowAssistiveHint();
+        }
+        else
+        {
+            hintedIndices.Clear();
+        }
+    }
+
+    private void ShowAssistiveHint()
+    {
+        hintedIndices.Clear();
+        var hint = SharedGameService.GetHint(game.VisibleCards);
+        if (hint.Any())
+        {
+            foreach (var card in hint)
+            {
+                var index = game.VisibleCards.IndexOf(card);
+                if (index >= 0)
+                {
+                    hintedIndices.Add(index);
+                }
+            }
+        }
+    }
+
+    private void AddChatMessage(string message)
+    {
+        var entry = ChatEntry.CreateMessageEntry(game.CurrentPlayerIndex, message, playerName);
+        game.ChatLogEntries.Add(entry);
+    }
+
+    private string GetFormattedTime()
+    {
+        return $"{(int)game.ElapsedTime.TotalMinutes}:{game.ElapsedTime.Seconds:D2}";
+    }
+
+    private string GetSetStatusMessage()
+    {
+        var count = SharedGameService.FindAllSets(game.VisibleCards).Count;
+        return count > 0
+            ? $"Status: {count} set{(count > 1 ? "s" : "")} can be found."
+            : "Status: No sets can be found.";
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}

@@ -1,0 +1,144 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<!-- SVG Definitions for Card Shapes -->
+<svg width="0" height="0" class="position-absolute">
+    <defs>
+        <path id="squiggle" d="m67.892902,12.746785c43.231313,-6.717223 107.352741,6.609823 121.028973,58.746408c13.676233,52.136585 -44.848649,161.467192 -45.07116,204.650732c4.566246,56.959708 83.805481,87.929227 22.329944,105.806022c-61.475536,17.876795 -126.122496,-1.855045 -143.73294,-41.933823c-17.610444,-40.07878 49.274638,-120.109409 46.14822,-188.091997c-3.126418,-67.982588 -21.873669,-70.257464 -49.613153,-80.177084c-27.739485,-9.919618 5.678801,-52.283035 48.910115,-59.000258z"></path>
+        <path id="oval" d="m11.49999,95.866646c0,-44.557076 37.442923,-81.999998 82.000002,-81.999998l12.000015,0c44.557076,0 81.999992,37.442923 81.999992,81.999998l0,206.133354c0,44.557098 -37.442917,82 -81.999992,82l-12.000015,0c-44.557079,0 -82.000002,-37.442902 -82.000002,-82l0,-206.133354z"></path>
+        <path id="diamond" d="m98.544521,10.311863l-87.830189,189.330815l88.201143,189.644391l88.942329,-190.362741l-89.313283,-188.612465z"></path>
+        <rect id="square" x="35" y="14" width="130" height="370"></rect>
+        <path id="triangle" d="M100,14 L195,384 L5,384 Z"></path>
+        <path id="hearts" d="M10,84 A45,45 0,0,1 100,84 A45,45 0,0,1 190,84 Q190,194 100,384 Q10,194 10,84 Z"></path>
+
+        <pattern id="pattern-stripe" width="2" height="20" patternUnits="userSpaceOnUse">
+            <rect width="2" height="8" fill="#fff"></rect>
+        </pattern>
+        <mask id="mask-stripe">
+            <rect x="0" y="0" width="200" height="400" fill="url(#pattern-stripe)"></rect>
+        </mask>
+    </defs>
+</svg>
+
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/" class="navbar-brand">
+            M8L Set GAME
+        </a>
+
+        <!-- Desktop Navigation -->
+        <ul class="navbar-nav">
+            <li><a href="/" class="nav-link @GetActiveClass("/")">Home</a></li>
+            <li><a href="/solo" class="nav-link @GetActiveClass("/solo")">Solo Game</a></li>
+            <li><a href="/multiplayer" class="nav-link @GetActiveClass("/multiplayer", "/waiting", "/play")">Play with Friends</a></li>
+            <li>
+                <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle dark/light mode">
+                    @if (isDarkMode)
+                    {
+                        <svg class="sun-icon" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5" />
+                            <line x1="12" y1="1" x2="12" y2="3" />
+                            <line x1="12" y1="21" x2="12" y2="23" />
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                            <line x1="1" y1="12" x2="3" y2="12" />
+                            <line x1="21" y1="12" x2="23" y2="12" />
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg class="moon-icon" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    }
+                </button>
+            </li>
+        </ul>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" @onclick="ToggleMobileMenu">
+            @(showMobileMenu ? "X" : "=")
+        </button>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <ul class="navbar-nav mobile @(showMobileMenu ? "show" : "")">
+        <li><a href="/" class="nav-link" @onclick="CloseMobileMenu">Home</a></li>
+        <li><a href="/solo" class="nav-link" @onclick="CloseMobileMenu">Solo Game</a></li>
+        <li><a href="/multiplayer" class="nav-link" @onclick="CloseMobileMenu">Play with Friends</a></li>
+        <li>
+            <button class="theme-toggle mobile-theme-toggle" @onclick="ToggleTheme">
+                @if (isDarkMode)
+                {
+                    <svg class="sun-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5" />
+                    </svg>
+                }
+                else
+                {
+                    <svg class="moon-icon" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                }
+                <span class="theme-toggle-text">Toggle Theme</span>
+            </button>
+        </li>
+    </ul>
+</nav>
+
+<!-- Main Content -->
+<main role="main">
+    @Body
+</main>
+
+@code {
+    private bool isDarkMode = false;
+    private bool showMobileMenu = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load saved theme from localStorage
+        var savedTheme = await JS.InvokeAsync<string>("localStorage.getItem", "theme");
+        isDarkMode = savedTheme == "dark";
+        await ApplyTheme();
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        await ApplyTheme();
+        await JS.InvokeVoidAsync("localStorage.setItem", "theme", isDarkMode ? "dark" : "light");
+    }
+
+    private async Task ApplyTheme()
+    {
+        await JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{(isDarkMode ? "dark" : "light")}')");
+    }
+
+    private void ToggleMobileMenu()
+    {
+        showMobileMenu = !showMobileMenu;
+    }
+
+    private void CloseMobileMenu()
+    {
+        showMobileMenu = false;
+    }
+
+    private string GetActiveClass(params string[] paths)
+    {
+        var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        currentPath = "/" + currentPath;
+
+        foreach (var path in paths)
+        {
+            if (currentPath == path || currentPath.StartsWith(path + "/"))
+                return "active";
+        }
+        return "";
+    }
+}

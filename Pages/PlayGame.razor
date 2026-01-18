@@ -1,0 +1,371 @@
+@page "/play/{RoomCode}"
+@inject IFirebaseService FirebaseService
+@inject IPlayerService PlayerService
+@inject IGameStateService GameStateService
+@inject ISharedGameService SharedGameService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Multiplayer Game - @RoomCode</PageTitle>
+
+@if (isLoading || room == null)
+{
+    <div class="main-container" style="text-align: center; padding: 4rem;">
+        <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+        <p>Loading game...</p>
+    </div>
+}
+else
+{
+    <div class="main-container">
+        <!-- Game Header -->
+        <div class="game-header">
+            <div class="header-content">
+                <h1 class="game-title">M8LSET + FRIENDS</h1>
+                <div class="game-info">
+                    <p><strong>Player:</strong> <span class="player-name-display">@currentPlayerName</span></p>
+                    <p><strong>Room:</strong> <span class="room-code-display">@RoomCode</span></p>
+                    <p id="setStatus">@GetSetStatusMessage()</p>
+                    <p><strong>Time:</strong> <span id="timer">@GetFormattedTime()</span></p>
+                </div>
+                <div class="game-options">
+                    <a href="/" class="btn btn-danger btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Leave Game
+                    </a>
+                    <button @onclick="ShowThemePopup" class="btn btn-outline btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                        </svg>
+                        Theme
+                    </button>
+                    <button @onclick="ShowChangeNamePopup" class="btn btn-outline btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Change Name
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Layout -->
+        <div class="game-layout">
+            <!-- Game Board Section -->
+            <div class="game-board-section">
+                <div class="board-container">
+                    <div class="board" id="board">
+                        @for (int i = 0; i < room.VisibleCards.Count; i++)
+                        {
+                            var index = i;
+                            var card = room.VisibleCards[i];
+                            <CardDisplay Card="@card"
+                                         Index="@index"
+                                         IsSelected="@selectedIndices.Contains(index)"
+                                         OnClick="@OnCardClicked" />
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Sidebar -->
+            <div class="game-sidebar">
+                <!-- Leaderboard Section -->
+                <div class="leaderboard-section">
+                    <h3>Leaderboard</h3>
+                    <div class="leaderboard-list">
+                        @foreach (var player in room.GetLeaderboard())
+                        {
+                            <div class="leaderboard-item @(player.Id == currentPlayerId ? "current-player" : "")">
+                                <span class="player-name">@player.Name</span>
+                                <span class="player-score">@player.Score</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="game-status">
+                        <p id="cardsRemaining">@room.RemainingCards cards remaining</p>
+                        @if (room.IsCompleted && room.GetWinner() != null)
+                        {
+                            <div class="winner-announcement">
+                                <strong>@room.GetWinner()?.Name</strong> Wins!
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Chat Section -->
+                <ChatSection Title="Game Chat"
+                             ChatEntries="@room.ChatLogEntries.OrderByDescending(e => e.Timestamp).ToList()"
+                             ShowRemainingCards="false"
+                             ShowChatInput="true"
+                             InputPlaceholder="Type a message..."
+                             OnMessageSent="@SendChatMessage" />
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Popups -->
+<ThemePopup IsVisible="@showThemePopup"
+            Theme="@(room?.Theme ?? new ThemeConfiguration())"
+            OnClose="@CloseThemePopup"
+            OnThemeChanged="@OnThemeChanged" />
+
+<ChangeNamePopup IsVisible="@showChangeNamePopup"
+                 CurrentName="@currentPlayerName"
+                 OnClose="@CloseChangeNamePopup"
+                 OnNameChanged="@OnNameChanged" />
+
+<!-- Game Complete Popup -->
+@if (room != null && room.IsCompleted)
+{
+    <div class="overlay">
+        <div class="popup end-game-popup">
+            <h3>Game Over!</h3>
+            @if (room.GetWinner() != null)
+            {
+                <div class="game-end-message">@room.GetWinner()?.Name wins!</div>
+            }
+            <div class="final-leaderboard">
+                <h4>Final Scores</h4>
+                <div class="leaderboard-final">
+                    @{ var position = 1; }
+                    @foreach (var player in room.GetLeaderboard())
+                    {
+                        <div class="leaderboard-item-final @(position == 1 ? "winner" : "")">
+                            <span class="position">#@position</span>
+                            <span class="player-name">@player.Name</span>
+                            <span class="player-score">@player.Score</span>
+                        </div>
+                        position++;
+                    }
+                </div>
+            </div>
+            <div class="end-game-buttons">
+                @if (room.IsPlayerHost(currentPlayerId))
+                {
+                    <button class="btn btn-primary" @onclick="PlayAgain">Play Again</button>
+                }
+                <a href="/" class="btn btn-outline">Home</a>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string RoomCode { get; set; } = string.Empty;
+
+    private MultiplayerGame? room;
+    private string currentPlayerId = string.Empty;
+    private string currentPlayerName = string.Empty;
+    private List<int> selectedIndices = new List<int>();
+    private bool isLoading = true;
+    private bool showThemePopup = false;
+    private bool showChangeNamePopup = false;
+    private System.Threading.Timer? timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FirebaseService.InitializeAsync();
+        currentPlayerId = await PlayerService.GetPlayerId();
+        currentPlayerName = await PlayerService.GetPlayerName();
+
+        room = await FirebaseService.GetRoomAsync(RoomCode);
+
+        if (room != null)
+        {
+            await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
+
+            var player = room.GetPlayer(currentPlayerId);
+            if (player != null)
+            {
+                currentPlayerName = player.Name;
+            }
+
+            StartTimer();
+        }
+
+        isLoading = false;
+    }
+
+    private void OnRoomUpdated(MultiplayerGame? updatedRoom)
+    {
+        if (updatedRoom == null) return;
+
+        room = updatedRoom;
+
+        var player = room.GetPlayer(currentPlayerId);
+        if (player != null)
+        {
+            currentPlayerName = player.Name;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void StartTimer()
+    {
+        timer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+    }
+
+    private async Task OnCardClicked(int index)
+    {
+        if (room == null || room.IsCompleted) return;
+
+        if (selectedIndices.Contains(index))
+        {
+            selectedIndices.Remove(index);
+        }
+        else
+        {
+            selectedIndices.Add(index);
+        }
+
+        if (selectedIndices.Count == 3)
+        {
+            await ValidateSelection();
+        }
+    }
+
+    private async Task ValidateSelection()
+    {
+        if (room == null) return;
+
+        var (isValid, message, validatedCards, newScore) =
+            GameStateService.ValidateMultiplayerSet(room, currentPlayerId, selectedIndices);
+
+        if (isValid)
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", message, "success", 2000);
+            await FirebaseService.UpdateRoomAsync(RoomCode, room);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification", message, "error", 2000);
+        }
+
+        selectedIndices.Clear();
+    }
+
+    private async Task SendChatMessage(string message)
+    {
+        if (room == null) return;
+
+        var player = room.GetPlayer(currentPlayerId);
+        var playerIndex = player != null ? room.Players.IndexOf(player) + 1 : 1;
+
+        var entry = ChatEntry.CreateMessageEntry(playerIndex, message, currentPlayerName);
+        room.ChatLogEntries.Add(entry);
+
+        await FirebaseService.UpdateRoomAsync(RoomCode, room);
+    }
+
+    private void ShowThemePopup()
+    {
+        showThemePopup = true;
+    }
+
+    private void CloseThemePopup()
+    {
+        showThemePopup = false;
+    }
+
+    private async Task OnThemeChanged((string Type, int Index) change)
+    {
+        if (room == null) return;
+
+        GameStateService.ChangeTheme(room, change.Type, change.Index);
+        await FirebaseService.UpdateRoomAsync(RoomCode, room);
+    }
+
+    private void ShowChangeNamePopup()
+    {
+        showChangeNamePopup = true;
+    }
+
+    private void CloseChangeNamePopup()
+    {
+        showChangeNamePopup = false;
+    }
+
+    private async Task OnNameChanged(string newName)
+    {
+        if (room == null) return;
+
+        var player = room.GetPlayer(currentPlayerId);
+        if (player != null)
+        {
+            player.Name = newName;
+            currentPlayerName = newName;
+            await PlayerService.SetPlayerName(newName);
+            await FirebaseService.UpdateRoomAsync(RoomCode, room);
+        }
+    }
+
+    private async Task PlayAgain()
+    {
+        if (room == null) return;
+
+        // Reset game state
+        room.IsStarted = false;
+        room.IsCompleted = false;
+        room.WinnerId = null;
+        room.ChatLogEntries.Clear();
+        room.StartTime = DateTime.Now;
+
+        // Reset player scores
+        foreach (var player in room.Players)
+        {
+            player.Score = 0;
+        }
+
+        // Regenerate deck
+        room.Deck = SharedGameService.GenerateDeck(room.Theme);
+        SharedGameService.ShuffleDeck(room.Deck);
+        room.NextCardIndex = 0;
+        room.VisibleCards.Clear();
+        SharedGameService.EnsurePlayableBoard(room);
+
+        await FirebaseService.UpdateRoomAsync(RoomCode, room);
+        Navigation.NavigateTo($"/waiting/{RoomCode}");
+    }
+
+    private string GetFormattedTime()
+    {
+        if (room == null) return "0:00";
+        return $"{(int)room.ElapsedTime.TotalMinutes}:{room.ElapsedTime.Seconds:D2}";
+    }
+
+    private string GetSetStatusMessage()
+    {
+        if (room == null) return "Status: Loading...";
+        var count = SharedGameService.FindAllSets(room.VisibleCards).Count;
+        return count > 0
+            ? $"Status: {count} set{(count > 1 ? "s" : "")} can be found."
+            : "Status: No sets can be found.";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        timer?.Dispose();
+        await FirebaseService.UnsubscribeFromRoomAsync(RoomCode);
+    }
+}

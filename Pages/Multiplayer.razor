@@ -1,0 +1,206 @@
+@page "/multiplayer"
+@inject IGameStateService GameStateService
+@inject IFirebaseService FirebaseService
+@inject IPlayerService PlayerService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Create Room - M8L Set GAME</PageTitle>
+
+<div class="main-container">
+    <div class="homepage-container">
+        <div class="homepage-hero">
+            <h1>Play with Friends</h1>
+            <p class="subtitle">Create a room and invite your friends to compete in real-time!</p>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="game-mode-card" style="text-align: center;">
+                <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                <p>Creating your room...</p>
+            </div>
+        }
+        else
+        {
+            <div class="game-modes">
+                <div class="game-mode-card">
+                    <h2>Create a New Room</h2>
+                    <p>Start a new game room and share the code with your friends.</p>
+
+                    <div class="change-name-content" style="margin-bottom: 1rem;">
+                        <p style="margin-bottom: 0.5rem;">Your display name:</p>
+                        <input type="text"
+                               @bind="playerName"
+                               @bind:event="oninput"
+                               class="name-input"
+                               placeholder="Enter your name"
+                               maxlength="20" />
+                    </div>
+
+                    <button @onclick="CreateRoom" class="btn btn-primary btn-lg" disabled="@isCreating">
+                        <span>@(isCreating ? "Creating..." : "Create Room")</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="game-mode-card">
+                    <h2>Join Existing Room</h2>
+                    <p>Have a room code? Enter it below to join your friends.</p>
+
+                    <div class="change-name-content" style="margin-bottom: 1rem;">
+                        <input type="text"
+                               @bind="roomCode"
+                               @bind:event="oninput"
+                               @onkeypress="HandleJoinKeyPress"
+                               class="name-input"
+                               placeholder="Enter room code"
+                               maxlength="6"
+                               style="text-transform: uppercase;" />
+                    </div>
+
+                    <button @onclick="JoinRoom" class="btn btn-secondary btn-lg" disabled="@isJoining">
+                        <span>@(isJoining ? "Joining..." : "Join Room")</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M21 12H3" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message" style="text-align: center; margin-top: 1rem;">@errorMessage</div>
+        }
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/" class="btn btn-outline">Back to Home</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private string playerName = "Player";
+    private string roomCode = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+    private bool isCreating = false;
+    private bool isJoining = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FirebaseService.InitializeAsync();
+        playerName = await PlayerService.GetPlayerName();
+        if (playerName == "Player")
+        {
+            playerName = $"Player{new Random().Next(1000, 9999)}";
+        }
+    }
+
+    private async Task CreateRoom()
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            errorMessage = "Please enter your name";
+            return;
+        }
+
+        isCreating = true;
+        StateHasChanged();
+
+        try
+        {
+            await PlayerService.SetPlayerName(playerName.Trim());
+            var playerId = await PlayerService.GetPlayerId();
+
+            var game = GameStateService.CreateNewMultiplayerGame(playerId, playerName.Trim());
+            var createdRoomCode = await FirebaseService.CreateRoomAsync(game);
+
+            if (!string.IsNullOrEmpty(createdRoomCode))
+            {
+                Navigation.NavigateTo($"/waiting/{createdRoomCode}");
+            }
+            else
+            {
+                errorMessage = "Failed to create room. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error creating room. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private async Task HandleJoinKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await JoinRoom();
+        }
+    }
+
+    private async Task JoinRoom()
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            errorMessage = "Please enter a room code";
+            return;
+        }
+
+        var code = roomCode.ToUpper().Trim();
+        if (code.Length != 6)
+        {
+            errorMessage = "Room code must be 6 characters";
+            return;
+        }
+
+        isJoining = true;
+        StateHasChanged();
+
+        try
+        {
+            var exists = await FirebaseService.RoomExistsAsync(code);
+            if (!exists)
+            {
+                errorMessage = "Room not found. Please check the code.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                playerName = $"Player{new Random().Next(1000, 9999)}";
+            }
+
+            await PlayerService.SetPlayerName(playerName.Trim());
+            Navigation.NavigateTo($"/join/{code}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error joining room. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isJoining = false;
+        }
+    }
+}

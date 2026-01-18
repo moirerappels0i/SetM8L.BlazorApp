@@ -1,0 +1,94 @@
+@* Theme selection popup component *@
+
+@if (IsVisible)
+{
+    <div class="overlay" @onclick="Close">
+        <div class="popup theme-popup" @onclick:stopPropagation="true">
+            <h3>Theme Settings</h3>
+            <div class="theme-content">
+                <div class="theme-section">
+                    <h4>Color Theme</h4>
+                    @for (int i = 0; i < Theme.ColorThemes.Count; i++)
+                    {
+                        var index = i;
+                        <div class="theme-option @(Theme.ColorThemeIndex == index ? "selected" : "")"
+                             @onclick="() => SelectColorTheme(index)">
+                            <div class="theme-option-content">
+                                <span class="theme-option-title">Theme @(index + 1)</span>
+                                <div class="color-theme-preview">
+                                    @foreach (var color in Theme.ColorThemes[index])
+                                    {
+                                        <div class="color-box" style="background-color: @color;"></div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="theme-section">
+                    <h4>Shape Theme</h4>
+                    @for (int i = 0; i < Theme.ShapeThemes.Count; i++)
+                    {
+                        var index = i;
+                        <div class="theme-option @(Theme.ShapeThemeIndex == index ? "selected" : "")"
+                             @onclick="() => SelectShapeTheme(index)">
+                            <div class="theme-option-content">
+                                <span class="theme-option-title">Theme @(index + 1)</span>
+                                <div class="shape-theme-preview">
+                                    @foreach (var shape in Theme.ShapeThemes[index])
+                                    {
+                                        <svg class="shape-preview-svg" viewBox="0 0 200 400">
+                                            <use href="#@shape" fill="#2563eb"></use>
+                                        </svg>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="theme-buttons">
+                <button class="btn btn-primary" @onclick="Close">Done</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public ThemeConfiguration Theme { get; set; } = new ThemeConfiguration();
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<(string Type, int Index)> OnThemeChanged { get; set; }
+
+    private async Task SelectColorTheme(int index)
+    {
+        if (OnThemeChanged.HasDelegate)
+        {
+            await OnThemeChanged.InvokeAsync(("color", index));
+        }
+    }
+
+    private async Task SelectShapeTheme(int index)
+    {
+        if (OnThemeChanged.HasDelegate)
+        {
+            await OnThemeChanged.InvokeAsync(("shape", index));
+        }
+    }
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

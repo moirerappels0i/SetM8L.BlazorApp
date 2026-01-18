@@ -1,0 +1,127 @@
+@page "/"
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Home - M8L Set GAME</PageTitle>
+
+<div class="main-container">
+    <div class="homepage-container">
+        <div class="homepage-hero">
+            <h1>Home</h1>
+            <p class="subtitle">Challenge your pattern recognition skills with the classic Set card game!</p>
+        </div>
+
+        <div class="game-modes">
+            <div class="game-mode-card">
+                <h2>Solo Game</h2>
+                <p>Play by yourself and try to find all the sets as quickly as possible. Perfect for learning and practice!</p>
+                <a href="/solo" class="btn btn-primary btn-lg">
+                    <span>Play Solo Game</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+
+            <div class="game-mode-card">
+                <h2>Play with Friends</h2>
+                <p>Create a room and invite your friends to compete in real-time! Up to 8 players can join.</p>
+                <a href="/multiplayer" class="btn btn-secondary btn-lg">
+                    <span>Create Room</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="join-room-section">
+            <h3>Join a Friend's Game</h3>
+            <p class="margin-bottom-md text-secondary-color">
+                Have a room code? Enter it below to join an existing game.
+            </p>
+            <div class="join-room-form">
+                <input type="text"
+                       @bind="roomCode"
+                       @bind:event="oninput"
+                       @onkeypress="HandleKeyPress"
+                       placeholder="Enter room code (e.g. ABC123)"
+                       maxlength="6"
+                       autocomplete="off"
+                       style="text-transform: uppercase;" />
+                <button @onclick="JoinRoom" class="btn btn-outline btn-lg" disabled="@isJoining">
+                    <span>@(isJoining ? "Joining..." : "Join Room")</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M21 12H3" />
+                    </svg>
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-message">@errorMessage</div>
+            }
+        </div>
+
+        <div class="centered-section">
+            <h3 class="section-heading">How to Play</h3>
+            <p class="description-text">
+                Find sets of three cards where each property (shape, color, fill, number) is either
+                <strong>all the same</strong> or <strong>all different</strong> across the three cards.
+                The game includes helpful features like hints, theme customization, and an assistive mode
+                to help you learn!
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string roomCode = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isJoining = false;
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await JoinRoom();
+        }
+    }
+
+    private async Task JoinRoom()
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            errorMessage = "Please enter a room code";
+            return;
+        }
+
+        var code = roomCode.ToUpper().Trim();
+        if (code.Length != 6)
+        {
+            errorMessage = "Room code must be 6 characters";
+            return;
+        }
+
+        isJoining = true;
+        StateHasChanged();
+
+        try
+        {
+            // Navigate to the join page
+            Navigation.NavigateTo($"/join/{code}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error joining room. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isJoining = false;
+        }
+    }
+}
