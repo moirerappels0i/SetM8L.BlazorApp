@@ -8,16 +8,16 @@ namespace SetCardGame.BlazorApp.Models.Game
         public List<List<string>> ColorThemes { get; set; } = new List<List<string>>
         {
             new List<string> { "#ff0101", "#f1c40f", "#008002" },  // Red, Yellow, Green
-            new List<string> { "#800080", "#008002", "#ff0101" },  // Purple, Green, Red
-            new List<string> { "#1f73bc", "#0da215", "#dd9427" }   // Blue, Green, Orange
+            new List<string> { "#ff0101", "#800080", "#008002" },  // Red, Purple, Green
+            new List<string> { "#1f73bc", "#f1c40f", "#008002" }   // Blue, Yellow, Green
         };
 
         [JsonPropertyName("shapeThemes")]
         public List<List<string>> ShapeThemes { get; set; } = new List<List<string>>
         {
             new List<string> { "oval", "diamond", "squiggle" },
-            new List<string> { "hearts", "squiggle", "triangle" },
-            new List<string> { "squiggle", "hearts", "triangle" }
+            new List<string> { "square", "hearts", "squiggle" },
+            new List<string> { "oval", "triangle", "squiggle" }
         };
 
         [JsonPropertyName("fillTypes")]
