@@ -2,7 +2,7 @@
   "name": "M8L Set Card Game",
   "short_name": "M8LSET",
   "description": "Challenge your pattern recognition skills with the classic Set card game!",
-  "start_url": "/",
+  "start_url": "/SetM8L.BlazorApp",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
