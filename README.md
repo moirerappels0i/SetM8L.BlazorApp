@@ -1,5 +1,5 @@
 # M8L Set Card Game - Blazor WebAssembly
-
+https://moirerappels0i.github.io/SetM8L.BlazorApp/
 A client-side Blazor WebAssembly implementation of the Set Card Game with Firebase Realtime Database for persistence and multiplayer support.
 
 ## Features
