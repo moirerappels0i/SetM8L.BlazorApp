@@ -1,110 +1,26 @@
 {
   "rules": {
-    // Rooms for multiplayer games
     "rooms": {
       "$roomCode": {
-        // Anyone authenticated can read room data
         ".read": "auth != null",
-
-        // Only authenticated users can write
-        ".write": "auth != null",
-
-        // Validate room structure
-        ".validate": "newData.hasChildren(['roomCode', 'hostId', 'players', 'isStarted'])",
-
-        "roomCode": {
-          ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 6"
-        },
-
-        "hostId": {
-          ".validate": "newData.isString()"
-        },
-
-        "isStarted": {
-          ".validate": "newData.isBoolean()"
-        },
-
-        "isCompleted": {
-          ".validate": "newData.isBoolean()"
-        },
-
-        "players": {
-          "$playerId": {
-            ".validate": "newData.hasChildren(['id', 'name', 'score'])",
-
-            "id": {
-              ".validate": "newData.isString()"
-            },
-
-            "name": {
-              // Player names must be 1-20 characters
-              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
-            },
-
-            "score": {
-              ".validate": "newData.isNumber() && newData.val() >= 0"
-            }
-          }
-        },
-
-        "visibleCards": {
-          "$index": {
-            ".validate": "newData.hasChildren(['shape', 'color', 'fill', 'number'])"
-          }
-        },
-
-        "chatLogEntries": {
-          "$entryId": {
-            ".validate": "newData.hasChildren(['type', 'player', 'timestamp'])",
-
-            "message": {
-              // Chat messages limited to 500 characters
-              ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 500)"
-            }
-          }
-        }
+        ".write": "auth != null"
       }
     },
 
-    // Solo game saves (optional persistence)
     "soloGames": {
-      "$oderId": {
-        // Users can only read/write their own solo games
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId",
-
-        "$gameId": {
-          ".validate": "newData.hasChildren(['score', 'visibleCards'])"
-        }
-      }
-    },
-
-    // Player profiles (for persistent names)
-    "players": {
-      "$oderId": {
-        // Users can only read/write their own profile
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId",
-
-        "name": {
-          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
-        },
-
-        "lastSeen": {
-          ".validate": "newData.isNumber()"
-        }
-      }
-    },
-
-    // Rate limiting: Track writes per user
-    "rateLimits": {
-      "$oderId": {
+      "$userId": {
         ".read": "auth != null && auth.uid == $userId",
         ".write": "auth != null && auth.uid == $userId"
       }
     },
 
-    // Default: deny all other access
+    "players": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId"
+      }
+    },
+
     ".read": false,
     ".write": false
   }
