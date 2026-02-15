@@ -82,14 +82,17 @@ Open `BlazorApp/wwwroot/js/firebase-interop.js` and replace the placeholder conf
 
 ```javascript
 const firebaseConfig = {
-    apiKey: "AIzaSyB...",                                    // Your API key
-    authDomain: "your-project-id.firebaseapp.com",           // Your auth domain
-    databaseURL: "https://your-project-id-default-rtdb.firebaseio.com", // Your database URL
-    projectId: "your-project-id",                            // Your project ID
-    storageBucket: "your-project-id.appspot.com",            // Your storage bucket
-    messagingSenderId: "123456789",                          // Your sender ID
-    appId: "1:123456789:web:abc123def456"                    // Your app ID
+    apiKey: "AIzaSyB...",                                                   // Your API key
+    authDomain: "your-project-id.firebaseapp.com",                          // Your auth domain
+    databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",     // Your database URL (REQUIRED!)
+    projectId: "your-project-id",                                           // Your project ID
+    storageBucket: "your-project-id.appspot.com",                           // Your storage bucket
+    messagingSenderId: "123456789",                                         // Your sender ID
+    appId: "1:123456789:web:abc123def456"                                   // Your app ID
 };
+```
+
+> **IMPORTANT**: The `databaseURL` field is required for Realtime Database to work. Find it in Firebase Console > Realtime Database (the URL shown at the top of the page).
 ```
 
 ### Step 6: Apply Security Rules (IMPORTANT!)
@@ -102,42 +105,21 @@ Go to **Realtime Database** > **"Rules"** tab and replace with:
     "rooms": {
       "$roomCode": {
         ".read": "auth != null",
-        ".write": "auth != null",
-        ".validate": "newData.hasChildren(['roomCode', 'hostId', 'players', 'isStarted'])",
-
-        "players": {
-          "$playerId": {
-            ".validate": "newData.hasChildren(['id', 'name', 'score'])",
-            "name": {
-              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
-            },
-            "score": {
-              ".validate": "newData.isNumber() && newData.val() >= 0"
-            }
-          }
-        },
-
-        "chatLogEntries": {
-          "$entryId": {
-            "message": {
-              ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 500)"
-            }
-          }
-        }
+        ".write": "auth != null"
       }
     },
 
     "soloGames": {
-      "$oderId": {
-        ".read": "auth != null && auth.uid == $oderId",
-        ".write": "auth != null && auth.uid == $oderId"
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId"
       }
     },
 
     "players": {
-      "$oderId": {
-        ".read": "auth != null && auth.uid == $oderId",
-        ".write": "auth != null && auth.uid == $oderId"
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId"
       }
     },
 
