@@ -130,7 +130,7 @@
 
             if (!string.IsNullOrEmpty(createdRoomCode))
             {
-                Navigation.NavigateTo($"/waiting/{createdRoomCode}");
+                Navigation.NavigateTo($"waiting/{createdRoomCode}");
             }
             else
             {
@@ -191,7 +191,7 @@
             }
 
             await PlayerService.SetPlayerName(playerName.Trim());
-            Navigation.NavigateTo($"/join/{code}");
+            Navigation.NavigateTo($"join/{code}");
         }
         catch (Exception ex)
         {
