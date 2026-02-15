@@ -151,11 +151,45 @@ window.FirebaseInterop = {
         }
     },
 
+    // Convert players array to Firebase object keyed by player ID
+    _playersArrayToObject: function(gameData) {
+        if (gameData && Array.isArray(gameData.players)) {
+            const playersObj = {};
+            gameData.players.forEach(player => {
+                if (player && player.id) {
+                    playersObj[player.id] = player;
+                }
+            });
+            gameData.players = playersObj;
+        }
+        return gameData;
+    },
+
+    // Convert players Firebase object back to array
+    _playersObjectToArray: function(gameData) {
+        if (gameData && gameData.players && !Array.isArray(gameData.players)) {
+            const playersArray = [];
+            for (const key in gameData.players) {
+                const player = gameData.players[key];
+                if (player && typeof player === 'object') {
+                    // Ensure the player has an id field
+                    if (!player.id) {
+                        player.id = key;
+                    }
+                    playersArray.push(player);
+                }
+            }
+            gameData.players = playersArray;
+        }
+        return gameData;
+    },
+
     // Create multiplayer room
     createRoom: async function (roomCode, gameData) {
         try {
             const roomRef = database.ref(`rooms/${roomCode}`);
-            await roomRef.set(gameData);
+            const data = this._playersArrayToObject(JSON.parse(JSON.stringify(gameData)));
+            await roomRef.set(data);
             return { success: true, roomCode: roomCode };
         } catch (error) {
             console.error('Error creating room:', error);
@@ -181,7 +215,8 @@ window.FirebaseInterop = {
             const roomRef = database.ref(`rooms/${roomCode}`);
             const snapshot = await roomRef.get();
             if (snapshot.exists()) {
-                return { success: true, data: snapshot.val() };
+                const data = this._playersObjectToArray(snapshot.val());
+                return { success: true, data: data };
             }
             return { success: false, error: 'Room not found' };
         } catch (error) {
@@ -194,7 +229,8 @@ window.FirebaseInterop = {
     updateRoom: async function (roomCode, gameData) {
         try {
             const roomRef = database.ref(`rooms/${roomCode}`);
-            await roomRef.update(gameData);
+            const data = this._playersArrayToObject(JSON.parse(JSON.stringify(gameData)));
+            await roomRef.set(data);
             return { success: true };
         } catch (error) {
             console.error('Error updating room:', error);
@@ -230,11 +266,12 @@ window.FirebaseInterop = {
     subscribeToRoom: function (roomCode, dotNetRef) {
         try {
             const roomRef = database.ref(`rooms/${roomCode}`);
+            const self = this;
 
             // Store listener reference for cleanup
             const listener = roomRef.on('value', (snapshot) => {
                 if (snapshot.exists()) {
-                    const data = snapshot.val();
+                    const data = self._playersObjectToArray(snapshot.val());
                     dotNetRef.invokeMethodAsync('OnRoomUpdated', JSON.stringify(data));
                 }
             });
