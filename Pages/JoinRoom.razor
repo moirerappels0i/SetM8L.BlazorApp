@@ -141,7 +141,7 @@
             room.AddPlayer(player);
             await FirebaseService.UpdateRoomAsync(RoomCode, room);
 
-            Navigation.NavigateTo($"/waiting/{RoomCode}");
+            Navigation.NavigateTo($"waiting/{RoomCode}");
         }
         catch (Exception ex)
         {
