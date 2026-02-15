@@ -5,7 +5,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyCgyQXeiPDp2aFMgRSaydbYFpwHY-l099c",
   authDomain: "setm8lblazorapp.firebaseapp.com",
-  databaseURL: "https://setm8lblazorapp-default-rtdb.firebaseio.com",
+  databaseURL: "https://setm8lblazorapp-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "setm8lblazorapp",
   storageBucket: "setm8lblazorapp.firebasestorage.app",
   messagingSenderId: "499113838509",
