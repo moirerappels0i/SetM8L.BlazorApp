@@ -345,7 +345,7 @@ else
         SharedGameService.EnsurePlayableBoard(room);
 
         await FirebaseService.UpdateRoomAsync(RoomCode, room);
-        Navigation.NavigateTo($"/waiting/{RoomCode}");
+        Navigation.NavigateTo($"waiting/{RoomCode}");
     }
 
     private string GetFormattedTime()
