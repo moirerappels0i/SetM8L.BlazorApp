@@ -2,13 +2,12 @@
 // IMPORTANT: Replace these values with your Firebase project config from Firebase Console
 // Get these values from: Firebase Console > Project Settings > Your apps > Web app
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCgyQXeiPDp2aFMgRSaydbYFpwHY-l099c",
+  authDomain: "setm8lblazorapp.firebaseapp.com",
+  projectId: "setm8lblazorapp",
+  storageBucket: "setm8lblazorapp.firebasestorage.app",
+  messagingSenderId: "499113838509",
+  appId: "1:499113838509:web:628021a8ab38a2cb264324"
 };
 
 // Initialize Firebase
