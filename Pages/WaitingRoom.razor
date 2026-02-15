@@ -204,7 +204,7 @@
         // Check if game has started
         if (room.IsStarted)
         {
-            Navigation.NavigateTo($"/play/{RoomCode}");
+            Navigation.NavigateTo($"play/{RoomCode}");
         }
 
         InvokeAsync(StateHasChanged);
