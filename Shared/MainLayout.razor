@@ -24,15 +24,15 @@
 <!-- Navigation -->
 <nav class="navbar">
     <div class="navbar-container">
-        <a href="/" class="navbar-brand">
+        <a href="" class="navbar-brand">
             M8L Set GAME
         </a>
 
         <!-- Desktop Navigation -->
         <ul class="navbar-nav">
-            <li><a href="/" class="nav-link @GetActiveClass("/")">Home</a></li>
-            <li><a href="/solo" class="nav-link @GetActiveClass("/solo")">Solo Game</a></li>
-            <li><a href="/multiplayer" class="nav-link @GetActiveClass("/multiplayer", "/waiting", "/play")">Play with Friends</a></li>
+            <li><a href="" class="nav-link @GetActiveClass("/")">Home</a></li>
+            <li><a href="solo" class="nav-link @GetActiveClass("/solo")">Solo Game</a></li>
+            <li><a href="multiplayer" class="nav-link @GetActiveClass("/multiplayer", "/waiting", "/play")">Play with Friends</a></li>
             <li>
                 <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle dark/light mode">
                     @if (isDarkMode)
@@ -67,9 +67,9 @@
 
     <!-- Mobile Navigation -->
     <ul class="navbar-nav mobile @(showMobileMenu ? "show" : "")">
-        <li><a href="/" class="nav-link" @onclick="CloseMobileMenu">Home</a></li>
-        <li><a href="/solo" class="nav-link" @onclick="CloseMobileMenu">Solo Game</a></li>
-        <li><a href="/multiplayer" class="nav-link" @onclick="CloseMobileMenu">Play with Friends</a></li>
+        <li><a href="" class="nav-link" @onclick="CloseMobileMenu">Home</a></li>
+        <li><a href="solo" class="nav-link" @onclick="CloseMobileMenu">Solo Game</a></li>
+        <li><a href="multiplayer" class="nav-link" @onclick="CloseMobileMenu">Play with Friends</a></li>
         <li>
             <button class="theme-toggle mobile-theme-toggle" @onclick="ToggleTheme">
                 @if (isDarkMode)
