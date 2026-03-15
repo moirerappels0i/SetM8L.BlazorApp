@@ -105,5 +105,6 @@ jobs:
           firebase functions:config:set \
             vapid.public_key="${{ secrets.VAPID_PUBLIC_KEY }}" \
             vapid.private_key="${{ secrets.VAPID_PRIVATE_KEY }}" \
-            vapid.email="${{ secrets.VAPID_EMAIL }}"
-          firebase deploy --only functions,database
+            vapid.email="${{ secrets.VAPID_EMAIL }}" \
+            --project setm8lblazorapp
+          firebase deploy --only functions,database --project setm8lblazorapp
