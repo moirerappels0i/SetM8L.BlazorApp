@@ -56,6 +56,22 @@
     <!-- Game UI helpers -->
     <script src="js/game-interop.js"></script>
 
+    <!-- Push Notifications -->
+    <script src="js/push-notifications.js"></script>
+
     <script src="_framework/blazor.webassembly.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                PushNotifications.initialize().then(function (success) {
+                    if (success) {
+                        console.log('Push notification system initialized');
+                    }
+                });
+            });
+        }
+    </script>
 </body>
 </html>
