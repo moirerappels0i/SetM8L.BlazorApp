@@ -39,6 +39,11 @@ jobs:
       - name: Publish
         run: dotnet publish SetCardGame.BlazorApp.csproj -c Release -o release --nologo
 
+      - name: Inject Firebase config
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: echo "$FIREBASE_CONFIG" > release/wwwroot/firebase-config.json
+
       # Blazor WebAssembly specific: Fix base href for GitHub Pages
       - name: Update base href
         run: |
