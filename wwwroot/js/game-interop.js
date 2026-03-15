@@ -85,10 +85,40 @@ window.GameInterop = {
         }
     },
 
-    // Play sound effect (optional)
+    // Play a short notification sound using the Web Audio API
     playSound: function (soundType) {
-        // Add sound effects if desired
-        console.log('Sound:', soundType);
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.value = 0.15;
+
+            switch (soundType) {
+                case 'join':
+                    osc.frequency.value = 660;
+                    osc.type = 'sine';
+                    break;
+                case 'leave':
+                    osc.frequency.value = 330;
+                    osc.type = 'sine';
+                    break;
+                case 'start':
+                    osc.frequency.value = 880;
+                    osc.type = 'sine';
+                    break;
+                default:
+                    osc.frequency.value = 520;
+                    osc.type = 'sine';
+            }
+
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {
+            // Audio not available — ignore silently
+        }
     },
 
     // Vibrate (mobile)
