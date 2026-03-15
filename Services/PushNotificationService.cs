@@ -8,9 +8,7 @@ public class PushNotificationService : IPushNotificationService
     private readonly IJSRuntime _jsRuntime;
     private bool _isInitialized;
 
-    // Replace this with your actual VAPID public key
-    // Generate with: npx web-push generate-vapid-keys
-    private const string VapidPublicKey = "YOUR_VAPID_PUBLIC_KEY_HERE";
+    private const string VapidPublicKey = "BJVrvhpMjsP79fU4cvF7DR3_aLQCi76idIRYo7RflbzgkgDTzs1jKwtdG4TuImva_CD4Mb1_xM2wBUgA28R0_aQ";
 
     public PushNotificationService(IJSRuntime jsRuntime)
     {
