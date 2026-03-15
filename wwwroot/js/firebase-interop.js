@@ -1,5 +1,13 @@
-// Firebase Configuration — loaded at runtime from firebase-config.json
-let firebaseConfig = null;
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCgyQXeiPDp2aFMgRSaydbYFpwHY-l099c",
+  authDomain: "setm8lblazorapp.firebaseapp.com",
+  databaseURL: "https://setm8lblazorapp-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "setm8lblazorapp",
+  storageBucket: "setm8lblazorapp.firebasestorage.app",
+  messagingSenderId: "499113838509",
+  appId: "1:499113838509:web:628021a8ab38a2cb264324"
+};
 
 // Initialize Firebase
 let firebaseApp = null;
@@ -70,19 +78,8 @@ window.FirebaseInterop = {
                 return { success: true, userId: currentUserId };
             }
 
-            // Load config from firebase-config.json if not passed in
+            // Use provided config or fall back to hardcoded config
             if (!config || !config.apiKey) {
-                if (!firebaseConfig) {
-                    try {
-                        const response = await fetch('firebase-config.json');
-                        if (!response.ok) {
-                            return { success: false, error: 'Firebase config not found. Copy firebase-config.template.json to firebase-config.json and fill in your values.' };
-                        }
-                        firebaseConfig = await response.json();
-                    } catch (fetchError) {
-                        return { success: false, error: 'Failed to load firebase-config.json: ' + fetchError.message };
-                    }
-                }
                 config = firebaseConfig;
             }
 
