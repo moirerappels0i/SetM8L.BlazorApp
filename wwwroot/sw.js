@@ -1,6 +1,18 @@
 // Service Worker for M8L Set Card Game - Push Notifications & Offline Support
 const CACHE_NAME = 'setm8l-cache-v1';
 
+// Derive base path from the service worker's scope (works for both local dev and GitHub Pages)
+function getBasePath() {
+    // self.registration.scope gives us the full URL like
+    // "https://user.github.io/SetM8L.BlazorApp/" or "http://localhost:12826/"
+    try {
+        const scopeUrl = new URL(self.registration.scope);
+        return scopeUrl.pathname; // e.g. "/SetM8L.BlazorApp/" or "/"
+    } catch {
+        return '/';
+    }
+}
+
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -21,12 +33,14 @@ self.addEventListener('activate', (event) => {
 
 // Push event - display notification when a push message arrives
 self.addEventListener('push', (event) => {
+    const basePath = getBasePath();
+
     let data = {
         title: 'M8L Set Game',
         body: 'You have a new notification!',
-        icon: '/SetM8L.BlazorApp/icon-192.png',
-        badge: '/SetM8L.BlazorApp/icon-192.png',
-        url: '/SetM8L.BlazorApp/',
+        icon: basePath + 'icon-192.png',
+        badge: basePath + 'icon-192.png',
+        url: basePath,
         tag: 'default'
     };
 
@@ -71,13 +85,14 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
-    const targetUrl = event.notification.data?.url || '/SetM8L.BlazorApp/';
+    const basePath = getBasePath();
+    const targetUrl = event.notification.data?.url || basePath;
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             // Check if the app is already open
             for (const client of clientList) {
-                if (client.url.includes('/SetM8L.BlazorApp') && 'focus' in client) {
+                if (client.url.includes(basePath) && 'focus' in client) {
                     // Navigate to the target URL and focus
                     client.navigate(targetUrl);
                     return client.focus();

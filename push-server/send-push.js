@@ -28,6 +28,8 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'YOUR_VAPID_PRIVATE_K
 const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:your-email@example.com';
 const FIREBASE_DATABASE_URL = process.env.FIREBASE_DATABASE_URL || 'https://your-project.firebaseio.com';
 const SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT || './serviceAccountKey.json';
+// Base path for the app — matches GitHub Pages deployment (e.g. "/SetM8L.BlazorApp/")
+const APP_BASE_PATH = process.env.APP_BASE_PATH || '/SetM8L.BlazorApp/';
 
 // Set VAPID details
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -61,8 +63,8 @@ async function sendPushToAll(payload) {
     const defaultPayload = {
         title: 'M8L Set Game',
         body: 'You have a new notification!',
-        icon: '/SetM8L.BlazorApp/icon-192.png',
-        url: '/SetM8L.BlazorApp/',
+        icon: APP_BASE_PATH + 'icon-192.png',
+        url: APP_BASE_PATH,
         tag: 'game-notification',
         ...payload
     };
@@ -129,8 +131,8 @@ async function sendPushToUser(userId, payload) {
     const defaultPayload = {
         title: 'M8L Set Game',
         body: 'You have a new notification!',
-        icon: '/SetM8L.BlazorApp/icon-192.png',
-        url: '/SetM8L.BlazorApp/',
+        icon: APP_BASE_PATH + 'icon-192.png',
+        url: APP_BASE_PATH,
         tag: 'game-notification',
         ...payload
     };
@@ -176,7 +178,7 @@ async function sendPushToUser(userId, payload) {
 if (require.main === module) {
     const title = process.argv[2] || 'Game Update';
     const body = process.argv[3] || 'Something happened in your game!';
-    const url = process.argv[4] || '/SetM8L.BlazorApp/';
+    const url = process.argv[4] || APP_BASE_PATH;
 
     sendPushToAll({ title, body, url })
         .then((result) => {

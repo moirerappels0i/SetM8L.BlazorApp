@@ -5,6 +5,15 @@ window.PushNotifications = {
     _swRegistration: null,
     _subscription: null,
 
+    // Derive base path from the <base> tag (works for both local dev and GitHub Pages)
+    _getBasePath: function () {
+        const baseEl = document.querySelector('base');
+        if (baseEl && baseEl.getAttribute('href')) {
+            return baseEl.getAttribute('href'); // e.g. "/" or "/SetM8L.BlazorApp/"
+        }
+        return '/';
+    },
+
     // Initialize - register service worker
     initialize: async function () {
         if (!('serviceWorker' in navigator)) {
@@ -13,8 +22,9 @@ window.PushNotifications = {
         }
 
         try {
-            this._swRegistration = await navigator.serviceWorker.register('/SetM8L.BlazorApp/sw.js', {
-                scope: '/SetM8L.BlazorApp/'
+            const basePath = this._getBasePath();
+            this._swRegistration = await navigator.serviceWorker.register(basePath + 'sw.js', {
+                scope: basePath
             });
             console.log('Service worker registered:', this._swRegistration.scope);
 
@@ -139,13 +149,14 @@ window.PushNotifications = {
         if (Notification.permission !== 'granted') return false;
 
         try {
+            const basePath = this._getBasePath();
             const reg = await navigator.serviceWorker.ready;
             await reg.showNotification('M8L Set Game', {
                 body: 'Push notifications are working!',
-                icon: '/SetM8L.BlazorApp/icon-192.png',
-                badge: '/SetM8L.BlazorApp/icon-192.png',
+                icon: basePath + 'icon-192.png',
+                badge: basePath + 'icon-192.png',
                 tag: 'test',
-                data: { url: '/SetM8L.BlazorApp/' }
+                data: { url: basePath }
             });
             return true;
         } catch (error) {
