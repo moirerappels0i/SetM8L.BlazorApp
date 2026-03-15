@@ -178,6 +178,7 @@ else
     private bool showThemePopup = false;
     private bool showChangeNamePopup = false;
     private System.Threading.Timer? timer;
+    private HashSet<string> previousPlayerIds = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,6 +190,7 @@ else
 
         if (room != null)
         {
+            previousPlayerIds = new HashSet<string>(room.Players.Select(p => p.Id));
             await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
 
             var player = room.GetPlayer(currentPlayerId);
@@ -207,6 +209,23 @@ else
     {
         if (updatedRoom == null) return;
 
+        var currentIds = new HashSet<string>(updatedRoom.Players.Select(p => p.Id));
+
+        // Detect players who left during the game
+        foreach (var id in previousPlayerIds)
+        {
+            if (!currentIds.Contains(id) && id != currentPlayerId)
+            {
+                InvokeAsync(async () =>
+                {
+                    await JS.InvokeVoidAsync("GameInterop.playSound", "leave");
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        "A player left the game", "warning", 3000);
+                });
+            }
+        }
+
+        previousPlayerIds = currentIds;
         room = updatedRoom;
 
         var player = room.GetPlayer(currentPlayerId);

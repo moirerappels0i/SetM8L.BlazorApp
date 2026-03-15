@@ -173,6 +173,7 @@
     private bool isConnected = false;
     private bool isStarting = false;
     private bool showChangeNamePopup = false;
+    private HashSet<string> previousPlayerIds = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,6 +186,9 @@
 
         if (room != null)
         {
+            // Capture initial player list before subscribing
+            previousPlayerIds = new HashSet<string>(room.Players.Select(p => p.Id));
+
             // Subscribe to real-time updates
             await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
             isConnected = true;
@@ -198,12 +202,53 @@
     {
         if (updatedRoom == null) return;
 
+        var currentIds = new HashSet<string>(updatedRoom.Players.Select(p => p.Id));
+
+        // Detect players who joined
+        foreach (var id in currentIds)
+        {
+            if (!previousPlayerIds.Contains(id) && id != currentPlayerId)
+            {
+                var joinedPlayer = updatedRoom.Players.FirstOrDefault(p => p.Id == id);
+                if (joinedPlayer != null)
+                {
+                    InvokeAsync(async () =>
+                    {
+                        await JS.InvokeVoidAsync("GameInterop.playSound", "join");
+                        await JS.InvokeVoidAsync("GameInterop.showNotification",
+                            $"{joinedPlayer.Name} joined the room", "success", 3000);
+                    });
+                }
+            }
+        }
+
+        // Detect players who left
+        foreach (var id in previousPlayerIds)
+        {
+            if (!currentIds.Contains(id) && id != currentPlayerId)
+            {
+                InvokeAsync(async () =>
+                {
+                    await JS.InvokeVoidAsync("GameInterop.playSound", "leave");
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        "A player left the room", "warning", 3000);
+                });
+            }
+        }
+
+        previousPlayerIds = currentIds;
         room = updatedRoom;
         UpdateRoomState();
 
         // Check if game has started
         if (room.IsStarted)
         {
+            InvokeAsync(async () =>
+            {
+                await JS.InvokeVoidAsync("GameInterop.playSound", "start");
+                await JS.InvokeVoidAsync("GameInterop.showNotification",
+                    "Game is starting!", "success", 2000);
+            });
             Navigation.NavigateTo($"play/{RoomCode}");
         }
 
