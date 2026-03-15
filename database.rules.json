@@ -21,6 +21,13 @@
       }
     },
 
+    "pushSubscriptions": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId"
+      }
+    },
+
     ".read": false,
     ".write": false
   }
