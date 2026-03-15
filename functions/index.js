@@ -5,12 +5,10 @@ const webpush = require('web-push');
 admin.initializeApp();
 const db = admin.database();
 
-// VAPID keys — set these via Firebase config:
-//   firebase functions:config:set vapid.public_key="..." vapid.private_key="..." vapid.email="mailto:you@example.com"
-const vapidConfig = functions.config().vapid || {};
-const VAPID_PUBLIC_KEY = vapidConfig.public_key || '';
-const VAPID_PRIVATE_KEY = vapidConfig.private_key || '';
-const VAPID_EMAIL = vapidConfig.email || 'mailto:noreply@example.com';
+// VAPID keys — set via environment variables in the deploy workflow
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:noreply@example.com';
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
