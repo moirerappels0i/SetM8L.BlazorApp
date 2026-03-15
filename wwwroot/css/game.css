@@ -2442,3 +2442,115 @@ button:focus,
 .theme-toggle-text {
     margin-left: 0.5rem;
 }
+
+/* ===== Push Notification Toggle ===== */
+.notification-toggle {
+    background: none;
+    border: 2px solid var(--border-medium);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: var(--text-secondary);
+}
+
+.notification-toggle:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.notification-toggle.subscribed {
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.notification-toggle.subscribed:hover {
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.notification-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.notification-toggle .bell-icon,
+.notification-toggle .bell-off-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.mobile-notification-toggle {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0;
+    gap: 0.5rem;
+}
+
+.notification-toggle-text {
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* ===== Install Banner ===== */
+.install-banner {
+    background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    position: relative;
+    z-index: 998;
+    animation: slideDown 0.3s ease;
+}
+
+.install-banner-content {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.install-banner-text {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.install-banner-instructions {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.install-banner-dismiss {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+}
+
+.install-banner-dismiss:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 600px) {
+    .install-banner-content {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
