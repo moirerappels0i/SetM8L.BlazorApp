@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using SetCardGame.BlazorApp.Models.Players;
-
+#command
 namespace SetCardGame.BlazorApp.Models.Game
 {
     public class MultiplayerGame : Game
