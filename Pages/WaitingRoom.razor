@@ -4,6 +4,7 @@
 @inject IGameStateService GameStateService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject INotificationService NotificationService
 @implements IAsyncDisposable
 
 <PageTitle>Waiting Room - @RoomCode</PageTitle>
@@ -198,12 +199,30 @@
     {
         if (updatedRoom == null) return;
 
+        var previousPlayerCount = room?.Players.Count ?? 0;
         room = updatedRoom;
         UpdateRoomState();
+
+        // Notify when a new player joins
+        if (room.Players.Count > previousPlayerCount && previousPlayerCount > 0)
+        {
+            var newPlayer = room.Players.LastOrDefault();
+            if (newPlayer != null && newPlayer.Id != currentPlayerId)
+            {
+                _ = NotificationService.ShowNotification(
+                    "Player Joined!",
+                    $"{newPlayer.Name} joined the room",
+                    $"waiting/{RoomCode}");
+            }
+        }
 
         // Check if game has started
         if (room.IsStarted)
         {
+            _ = NotificationService.ShowNotification(
+                "Game Started!",
+                "The game is starting now!",
+                $"play/{RoomCode}");
             Navigation.NavigateTo($"play/{RoomCode}");
         }
 

@@ -15,5 +15,6 @@ builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<IGameStateService, GameStateService>();
 builder.Services.AddScoped<IFirebaseService, FirebaseService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 await builder.Build().RunAsync();
