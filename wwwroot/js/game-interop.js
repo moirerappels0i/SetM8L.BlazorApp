@@ -85,10 +85,47 @@ window.GameInterop = {
         }
     },
 
-    // Play sound effect (optional)
+    // Play sound effect using Web Audio API
     playSound: function (soundType) {
-        // Add sound effects if desired
-        console.log('Sound:', soundType);
+        try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var oscillator = ctx.createOscillator();
+            var gain = ctx.createGain();
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+
+            switch (soundType) {
+                case 'notification-on':
+                    // Two-tone ascending chime
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(523.25, ctx.currentTime);       // C5
+                    oscillator.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12); // E5
+                    oscillator.frequency.setValueAtTime(783.99, ctx.currentTime + 0.24); // G5
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+                    oscillator.start(ctx.currentTime);
+                    oscillator.stop(ctx.currentTime + 0.45);
+                    break;
+                case 'notification':
+                    // Single bell tone
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(830, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    oscillator.start(ctx.currentTime);
+                    oscillator.stop(ctx.currentTime + 0.3);
+                    break;
+                default:
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    oscillator.start(ctx.currentTime);
+                    oscillator.stop(ctx.currentTime + 0.2);
+            }
+        } catch (err) {
+            console.log('Sound not available:', err);
+        }
     },
 
     // Vibrate (mobile)
@@ -179,6 +216,39 @@ window.GameInterop = {
                 return true;
             } catch (err) {
                 console.error('Failed to show notification:', err);
+                return false;
+            }
+        },
+
+        // Show a test notification with sound (always shows, even when focused)
+        showTest: function (title, body) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') {
+                return false;
+            }
+
+            try {
+                // Play the notification-on sound
+                GameInterop.playSound('notification-on');
+
+                var options = {
+                    body: body || '',
+                    icon: 'icon-192.png',
+                    badge: 'icon-192.png',
+                    tag: 'setm8l-test',
+                    requireInteraction: false
+                };
+
+                // Try service worker notification first
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.ready.then(function (reg) {
+                        reg.showNotification(title, options);
+                    });
+                } else {
+                    new Notification(title, options);
+                }
+                return true;
+            } catch (err) {
+                console.error('Failed to show test notification:', err);
                 return false;
             }
         },

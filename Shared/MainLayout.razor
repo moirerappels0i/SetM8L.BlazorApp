@@ -208,7 +208,10 @@
             {
                 notificationsEnabled = true;
                 await NotificationService.SetEnabled(true);
-                await JS.InvokeVoidAsync("GameInterop.showNotification", "Notifications enabled!", "success", 2000);
+                // Fire a real browser notification with sound to confirm it works
+                await NotificationService.ShowTestNotification(
+                    "M8LSET Notifications Enabled!",
+                    "You'll be notified about game events when the app is in the background.");
             }
             else
             {

@@ -48,4 +48,9 @@ public class NotificationService : INotificationService
 
         return await _jsRuntime.InvokeAsync<bool>("GameInterop.notifications.show", title, body, null, url);
     }
+
+    public async Task<bool> ShowTestNotification(string title, string body)
+    {
+        return await _jsRuntime.InvokeAsync<bool>("GameInterop.notifications.showTest", title, body);
+    }
 }
