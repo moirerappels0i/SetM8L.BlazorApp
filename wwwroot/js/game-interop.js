@@ -116,6 +116,91 @@ window.GameInterop = {
         }
     },
 
+    // Notification helpers
+    notifications: {
+        // Check if browser notifications are supported
+        isSupported: function () {
+            return 'Notification' in window;
+        },
+
+        // Check if running as standalone PWA
+        isStandalone: function () {
+            return window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+        },
+
+        // Get current permission status: 'granted', 'denied', 'default', or 'unsupported'
+        getPermission: function () {
+            if (!('Notification' in window)) return 'unsupported';
+            return Notification.permission;
+        },
+
+        // Request notification permission (must be called from user gesture)
+        requestPermission: async function () {
+            if (!('Notification' in window)) return 'unsupported';
+            try {
+                const result = await Notification.requestPermission();
+                return result;
+            } catch (err) {
+                console.error('Notification permission request failed:', err);
+                return 'denied';
+            }
+        },
+
+        // Show a browser notification
+        show: function (title, body, icon, url) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') {
+                return false;
+            }
+
+            // Don't show if the page is visible and focused
+            if (document.visibilityState === 'visible' && document.hasFocus()) {
+                return false;
+            }
+
+            try {
+                const options = {
+                    body: body || '',
+                    icon: icon || 'icon-192.png',
+                    badge: 'icon-192.png',
+                    data: { url: url || '/' },
+                    tag: 'setm8l-' + Date.now(),
+                    requireInteraction: false
+                };
+
+                // Try service worker notification first (works better in standalone PWA)
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.ready.then(function (reg) {
+                        reg.showNotification(title, options);
+                    });
+                } else {
+                    new Notification(title, options);
+                }
+                return true;
+            } catch (err) {
+                console.error('Failed to show notification:', err);
+                return false;
+            }
+        },
+
+        // Check if notifications are enabled (permission granted + user preference)
+        isEnabled: function () {
+            if (!('Notification' in window)) return false;
+            var pref = localStorage.getItem('notifications-enabled');
+            return Notification.permission === 'granted' && pref === 'true';
+        },
+
+        // Set user preference for notifications
+        setEnabled: function (enabled) {
+            localStorage.setItem('notifications-enabled', enabled ? 'true' : 'false');
+        },
+
+        // Get user preference
+        getEnabled: function () {
+            return localStorage.getItem('notifications-enabled') === 'true';
+        }
+    },
+
     // Timer helpers
     timers: {},
 

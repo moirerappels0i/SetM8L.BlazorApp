@@ -5,6 +5,7 @@
 @inject ISharedGameService SharedGameService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject INotificationService NotificationService
 @implements IAsyncDisposable
 
 <PageTitle>Multiplayer Game - @RoomCode</PageTitle>
@@ -197,22 +198,66 @@ else
                 currentPlayerName = player.Name;
             }
 
+            _previousChatCount = room.ChatLogEntries.Count;
+            _previousScores = room.Players.ToDictionary(p => p.Id, p => p.Score);
             StartTimer();
         }
 
         isLoading = false;
     }
 
+    private int _previousChatCount = 0;
+    private Dictionary<string, int> _previousScores = new();
+
     private void OnRoomUpdated(MultiplayerGame? updatedRoom)
     {
         if (updatedRoom == null) return;
 
+        var previousRoom = room;
         room = updatedRoom;
 
         var player = room.GetPlayer(currentPlayerId);
         if (player != null)
         {
             currentPlayerName = player.Name;
+        }
+
+        // Notify on new chat messages from other players
+        if (room.ChatLogEntries.Count > _previousChatCount && _previousChatCount > 0)
+        {
+            var latestEntry = room.ChatLogEntries.LastOrDefault();
+            if (latestEntry != null && latestEntry.PlayerName != currentPlayerName)
+            {
+                _ = NotificationService.ShowNotification(
+                    $"{latestEntry.PlayerName}",
+                    latestEntry.Message,
+                    $"play/{RoomCode}");
+            }
+        }
+        _previousChatCount = room.ChatLogEntries.Count;
+
+        // Notify when another player finds a set
+        foreach (var p in room.Players)
+        {
+            if (p.Id == currentPlayerId) continue;
+            if (_previousScores.TryGetValue(p.Id, out var prevScore) && p.Score > prevScore)
+            {
+                _ = NotificationService.ShowNotification(
+                    "Set Found!",
+                    $"{p.Name} found a set! (Score: {p.Score})",
+                    $"play/{RoomCode}");
+            }
+        }
+        _previousScores = room.Players.ToDictionary(p => p.Id, p => p.Score);
+
+        // Notify when game completes
+        if (room.IsCompleted && previousRoom != null && !previousRoom.IsCompleted)
+        {
+            var winner = room.GetWinner();
+            _ = NotificationService.ShowNotification(
+                "Game Over!",
+                winner != null ? $"{winner.Name} wins!" : "The game has ended.",
+                $"play/{RoomCode}");
         }
 
         InvokeAsync(StateHasChanged);
