@@ -3,7 +3,7 @@
 // Get these values from: Firebase Console > Project Settings > Your apps > Web app
 // Get databaseURL from: Firebase Console > Realtime Database > Copy the URL at the top
 const firebaseConfig = {
-  apiKey: "AIzaSyCgyQXeiPDp2aFMgRSaydbYFpwHY-l099c",
+  apiKey: "AIzaSyAsxM4rbqF6yQB-0L2L2PvipYQa7zRpnYM",
   authDomain: "setm8lblazorapp.firebaseapp.com",
   databaseURL: "https://setm8lblazorapp-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "setm8lblazorapp",
