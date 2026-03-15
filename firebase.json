@@ -2,9 +2,6 @@
   "database": {
     "rules": "database.rules.json"
   },
-  "functions": {
-    "source": "functions"
-  },
   "hosting": {
     "public": "bin/Release/net8.0/publish/wwwroot",
     "ignore": [
