@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject IPushNotificationService PushNotificationService
 
 <!-- SVG Definitions for Card Shapes -->
 <svg width="0" height="0" class="position-absolute">
@@ -57,6 +58,33 @@
                     }
                 </button>
             </li>
+            @if (showNotificationToggle)
+            {
+                <li>
+                    <button class="notification-toggle @(isSubscribed ? "subscribed" : "")"
+                            @onclick="ToggleNotifications"
+                            title="@(isSubscribed ? "Disable notifications" : "Enable notifications")"
+                            disabled="@isTogglingNotifications">
+                        @if (isSubscribed)
+                        {
+                            <svg class="bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>
+                        }
+                        else
+                        {
+                            <svg class="bell-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                                <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+                                <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+                                <path d="M18 8a6 6 0 0 0-9.33-5" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        }
+                    </button>
+                </li>
+            }
         </ul>
 
         <!-- Mobile Menu Toggle -->
@@ -87,8 +115,53 @@
                 <span class="theme-toggle-text">Toggle Theme</span>
             </button>
         </li>
+        @if (showNotificationToggle)
+        {
+            <li>
+                <button class="notification-toggle mobile-notification-toggle @(isSubscribed ? "subscribed" : "")"
+                        @onclick="ToggleNotifications"
+                        disabled="@isTogglingNotifications">
+                    @if (isSubscribed)
+                    {
+                        <svg class="bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg class="bell-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+                            <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+                            <path d="M18 8a6 6 0 0 0-9.33-5" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                    }
+                    <span class="notification-toggle-text">
+                        @(isSubscribed ? "Notifications On" : "Enable Notifications")
+                    </span>
+                </button>
+            </li>
+        }
     </ul>
 </nav>
+
+<!-- Install Banner (shown when not in standalone mode and push is supported) -->
+@if (showInstallBanner)
+{
+    <div class="install-banner">
+        <div class="install-banner-content">
+            <span class="install-banner-text">
+                Install this app for the best experience with push notifications.
+            </span>
+            <span class="install-banner-instructions">
+                Tap the Share button, then "Add to Home Screen".
+            </span>
+            <button class="install-banner-dismiss" @onclick="DismissInstallBanner">Got it</button>
+        </div>
+    </div>
+}
 
 <!-- Main Content -->
 <main role="main">
@@ -98,6 +171,11 @@
 @code {
     private bool isDarkMode = false;
     private bool showMobileMenu = false;
+    private bool showNotificationToggle = false;
+    private bool isSubscribed = false;
+    private bool isTogglingNotifications = false;
+    private bool showInstallBanner = false;
+    private bool _pushSupported = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -105,6 +183,106 @@
         var savedTheme = await JS.InvokeAsync<string>("localStorage.getItem", "theme");
         isDarkMode = savedTheme == "dark";
         await ApplyTheme();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CheckPushNotificationState();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckPushNotificationState()
+    {
+        try
+        {
+            _pushSupported = await PushNotificationService.IsPushSupportedAsync();
+            var isStandalone = await PushNotificationService.IsStandaloneModeAsync();
+
+            if (isStandalone && _pushSupported)
+            {
+                // In standalone mode with push support - show the notification toggle
+                showNotificationToggle = true;
+                isSubscribed = await PushNotificationService.IsSubscribedAsync();
+            }
+            else if (_pushSupported && !isStandalone)
+            {
+                // Not in standalone mode - show install banner (if not previously dismissed)
+                var dismissed = await JS.InvokeAsync<string?>("localStorage.getItem", "install-banner-dismissed");
+                showInstallBanner = dismissed != "true";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Push notification check failed: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleNotifications()
+    {
+        if (isTogglingNotifications) return;
+
+        isTogglingNotifications = true;
+        StateHasChanged();
+
+        try
+        {
+            if (isSubscribed)
+            {
+                // Unsubscribe
+                var success = await PushNotificationService.UnsubscribeAsync();
+                if (success)
+                {
+                    isSubscribed = false;
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        "Notifications disabled", "success", 2000);
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        "Failed to disable notifications", "error", 2000);
+                }
+            }
+            else
+            {
+                // Subscribe - this triggers the permission prompt (must be from user gesture)
+                var result = await PushNotificationService.SubscribeAsync();
+                if (result.Success)
+                {
+                    isSubscribed = true;
+                    await PushNotificationService.SendTestNotificationAsync();
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        "Notifications enabled!", "success", 2000);
+                }
+                else
+                {
+                    var errorMsg = result.Error == "Permission denied"
+                        ? "Notification permission was denied. Check your device settings."
+                        : $"Failed to enable notifications: {result.Error}";
+                    await JS.InvokeVoidAsync("GameInterop.showNotification",
+                        errorMsg, "error", 3000);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("GameInterop.showNotification",
+                "Notification error occurred", "error", 2000);
+            Console.Error.WriteLine($"Notification toggle error: {ex.Message}");
+        }
+        finally
+        {
+            isTogglingNotifications = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DismissInstallBanner()
+    {
+        showInstallBanner = false;
+        await JS.InvokeVoidAsync("localStorage.setItem", "install-banner-dismissed", "true");
     }
 
     private async Task ToggleTheme()
