@@ -86,17 +86,19 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Install function dependencies
         run: cd functions && npm install
 
       - name: Set VAPID config and deploy functions
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           npm install -g firebase-tools
           firebase functions:config:set \
             vapid.public_key="${{ secrets.VAPID_PUBLIC_KEY }}" \
             vapid.private_key="${{ secrets.VAPID_PRIVATE_KEY }}" \
-            vapid.email="${{ secrets.VAPID_EMAIL }}" \
-            --token "$FIREBASE_TOKEN"
-          firebase deploy --only functions,database --token "$FIREBASE_TOKEN"
+            vapid.email="${{ secrets.VAPID_EMAIL }}"
+          firebase deploy --only functions,database
