@@ -155,6 +155,10 @@ window.GameInterop = {
 
     // Notification helpers
     notifications: {
+        // Background tracking state
+        _wasBackgrounded: false,
+        _bgTimeout: null,
+
         // Check if browser notifications are supported
         isSupported: function () {
             return 'Notification' in window;
@@ -184,14 +188,19 @@ window.GameInterop = {
             }
         },
 
-        // Show a browser notification
+        // Show a browser notification (or catch-up toast if returning from background)
         show: function (title, body, icon, url) {
             if (!('Notification' in window) || Notification.permission !== 'granted') {
                 return false;
             }
 
-            // Don't show if the page is visible and focused
+            // If page is visible, show in-app toast only if we just returned from background
             if (document.visibilityState === 'visible' && document.hasFocus()) {
+                if (GameInterop.notifications._wasBackgrounded) {
+                    GameInterop.playSound('notification');
+                    GameInterop.showNotification(title + ': ' + (body || ''), 'info', 4000);
+                    return true;
+                }
                 return false;
             }
 
@@ -297,6 +306,21 @@ window.GameInterop = {
         }
     }
 };
+
+// Track app backgrounding for catch-up notifications
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+        GameInterop.notifications._wasBackgrounded = true;
+        clearTimeout(GameInterop.notifications._bgTimeout);
+    } else {
+        // Keep the flag active for 5 seconds after returning, then clear it
+        // This gives Firebase time to reconnect and fire pending updates
+        clearTimeout(GameInterop.notifications._bgTimeout);
+        GameInterop.notifications._bgTimeout = setTimeout(function () {
+            GameInterop.notifications._wasBackgrounded = false;
+        }, 5000);
+    }
+});
 
 // Add CSS animation for notifications
 const style = document.createElement('style');
