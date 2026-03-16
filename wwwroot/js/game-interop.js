@@ -196,6 +196,9 @@ window.GameInterop = {
             }
 
             try {
+                // Play notification sound
+                GameInterop.playSound('notification');
+
                 const options = {
                     body: body || '',
                     icon: icon || 'icon-192.png',
@@ -211,7 +214,15 @@ window.GameInterop = {
                         reg.showNotification(title, options);
                     });
                 } else {
-                    new Notification(title, options);
+                    var notif = new Notification(title, options);
+                    notif.onclick = function () {
+                        window.focus();
+                        if (url) {
+                            var fullUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/') + url;
+                            window.location.href = fullUrl;
+                        }
+                        notif.close();
+                    };
                 }
                 return true;
             } catch (err) {
