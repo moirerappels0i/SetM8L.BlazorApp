@@ -228,6 +228,10 @@ else
             var latestEntry = room.ChatLogEntries.LastOrDefault();
             if (latestEntry != null && latestEntry.PlayerName != currentPlayerName)
             {
+                // In-app toast (always visible to active players)
+                _ = JS.InvokeVoidAsync("GameInterop.showNotification",
+                    $"{latestEntry.PlayerName}: {latestEntry.Message}", "info", 3000);
+                // Browser notification (for backgrounded players)
                 _ = NotificationService.ShowNotification(
                     $"{latestEntry.PlayerName}",
                     latestEntry.Message,
@@ -242,6 +246,11 @@ else
             if (p.Id == currentPlayerId) continue;
             if (_previousScores.TryGetValue(p.Id, out var prevScore) && p.Score > prevScore)
             {
+                // In-app toast (always visible to active players)
+                _ = JS.InvokeVoidAsync("GameInterop.showNotification",
+                    $"{p.Name} found a set! (Score: {p.Score})", "success", 3000);
+                _ = JS.InvokeVoidAsync("GameInterop.playSound", "notification");
+                // Browser notification (for backgrounded players)
                 _ = NotificationService.ShowNotification(
                     "Set Found!",
                     $"{p.Name} found a set! (Score: {p.Score})",
@@ -254,10 +263,14 @@ else
         if (room.IsCompleted && previousRoom != null && !previousRoom.IsCompleted)
         {
             var winner = room.GetWinner();
+            var msg = winner != null ? $"{winner.Name} wins!" : "The game has ended.";
+            // In-app toast
+            _ = JS.InvokeVoidAsync("GameInterop.showNotification",
+                $"Game Over! {msg}", "warning", 5000);
+            _ = JS.InvokeVoidAsync("GameInterop.playSound", "notification-on");
+            // Browser notification
             _ = NotificationService.ShowNotification(
-                "Game Over!",
-                winner != null ? $"{winner.Name} wins!" : "The game has ended.",
-                $"play/{RoomCode}");
+                "Game Over!", msg, $"play/{RoomCode}");
         }
 
         InvokeAsync(StateHasChanged);
