@@ -216,6 +216,15 @@
             }
         }
 
+        // Notify when a player leaves
+        if (room.Players.Count < previousPlayerCount && previousPlayerCount > 0)
+        {
+            _ = NotificationService.ShowNotification(
+                "Player Left",
+                $"A player left the room ({room.Players.Count} remaining)",
+                $"waiting/{RoomCode}");
+        }
+
         // Check if game has started
         if (room.IsStarted)
         {
