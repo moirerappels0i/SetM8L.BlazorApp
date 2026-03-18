@@ -367,18 +367,34 @@ window.FirebaseInterop = {
         try {
             if (!database) return { success: false, error: 'Firebase not initialized' };
             const presenceRef = database.ref('rooms/' + roomCode + '/players/' + playerId + '/online');
+            const statusRef = database.ref('rooms/' + roomCode + '/players/' + playerId + '/status');
             const connectedRef = database.ref('.info/connected');
 
             connectedRef.on('value', async function(snapshot) {
                 if (snapshot.val() === true) {
                     await presenceRef.onDisconnect().set(false);
+                    await statusRef.onDisconnect().set('away');
                     await presenceRef.set(true);
+                    await statusRef.set('active');
                 }
             });
 
             return { success: true };
         } catch (error) {
             console.error('Error setting up presence:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Update player status in room
+    updatePlayerStatus: async function(roomCode, playerId, status) {
+        try {
+            if (!database) return { success: false, error: 'Firebase not initialized' };
+            const statusRef = database.ref('rooms/' + roomCode + '/players/' + playerId + '/status');
+            await statusRef.set(status);
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating player status:', error);
             return { success: false, error: error.message };
         }
     },

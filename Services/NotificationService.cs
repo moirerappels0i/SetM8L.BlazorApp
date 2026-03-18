@@ -53,4 +53,14 @@ public class NotificationService : INotificationService
     {
         return await _jsRuntime.InvokeAsync<bool>("GameInterop.notifications.showTest", title, body);
     }
+
+    public async Task<bool> IsInAppEnabled()
+    {
+        return await _jsRuntime.InvokeAsync<bool>("GameInterop.notifications.isInAppEnabled");
+    }
+
+    public async Task SetInAppEnabled(bool enabled)
+    {
+        await _jsRuntime.InvokeVoidAsync("GameInterop.notifications.setInAppEnabled", enabled);
+    }
 }

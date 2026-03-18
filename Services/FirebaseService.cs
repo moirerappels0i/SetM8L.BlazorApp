@@ -206,6 +206,32 @@ namespace SetCardGame.BlazorApp.Services
             }
         }
 
+        public async Task<bool> UpdatePlayerStatusAsync(string roomCode, string playerId, string status)
+        {
+            try
+            {
+                var result = await _jsRuntime.InvokeAsync<JsonElement>("FirebaseInterop.updatePlayerStatus", roomCode, playerId, status);
+                return result.GetProperty("success").GetBoolean();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating player status: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task SetupPresenceAsync(string roomCode, string playerId)
+        {
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("FirebaseInterop.setupPresence", roomCode, playerId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting up presence: {ex.Message}");
+            }
+        }
+
         public async Task SubscribeToRoomAsync(string roomCode, Action<MultiplayerGame?> onUpdate)
         {
             try

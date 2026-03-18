@@ -60,7 +60,7 @@
             </li>
             @if (notificationsSupported)
             {
-                <li>
+                <li class="notification-menu-container">
                     <button class="notification-toggle @(notificationsEnabled ? "enabled" : "")" @onclick="ToggleNotifications" title="@(notificationsEnabled ? "Disable notifications" : "Enable notifications")">
                         @if (notificationsEnabled)
                         {
@@ -79,6 +79,35 @@
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                             </svg>
                         }
+                    </button>
+                    @if (showNotificationSettings)
+                    {
+                        <div class="notification-settings-dropdown">
+                            <div class="notification-settings-header">Notification Settings</div>
+                            <div class="notification-setting-item">
+                                <label class="notification-setting-label">
+                                    <span>Push Notifications</span>
+                                    <span class="notification-setting-desc">When app is in background</span>
+                                </label>
+                                <button class="toggle-switch @(notificationsEnabled ? "on" : "")" @onclick="ToggleNotifications">
+                                    <span class="toggle-knob"></span>
+                                </button>
+                            </div>
+                            <div class="notification-setting-item">
+                                <label class="notification-setting-label">
+                                    <span>In-App Notifications</span>
+                                    <span class="notification-setting-desc">Toasts while playing</span>
+                                </label>
+                                <button class="toggle-switch @(inAppNotificationsEnabled ? "on" : "")" @onclick="ToggleInAppNotifications">
+                                    <span class="toggle-knob"></span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    <button class="notification-settings-btn" @onclick="ToggleNotificationSettings" title="Notification settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                     </button>
                 </li>
             }
@@ -136,6 +165,14 @@
                     <span class="notification-toggle-text">@(notificationsEnabled ? "Notifications On" : "Notifications Off")</span>
                 </button>
             </li>
+            <li>
+                <div class="mobile-notification-setting">
+                    <span>In-App Notifications</span>
+                    <button class="toggle-switch @(inAppNotificationsEnabled ? "on" : "")" @onclick="ToggleInAppNotifications">
+                        <span class="toggle-knob"></span>
+                    </button>
+                </div>
+            </li>
         }
     </ul>
 </nav>
@@ -150,6 +187,8 @@
     private bool showMobileMenu = false;
     private bool notificationsSupported = false;
     private bool notificationsEnabled = false;
+    private bool inAppNotificationsEnabled = true;
+    private bool showNotificationSettings = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +202,7 @@
         if (notificationsSupported)
         {
             notificationsEnabled = await NotificationService.IsEnabled();
+            inAppNotificationsEnabled = await NotificationService.IsInAppEnabled();
         }
     }
 
@@ -219,6 +259,19 @@
                     "Notification permission was not granted", "error", 3000);
             }
         }
+    }
+
+    private async Task ToggleInAppNotifications()
+    {
+        inAppNotificationsEnabled = !inAppNotificationsEnabled;
+        await NotificationService.SetInAppEnabled(inAppNotificationsEnabled);
+        var msg = inAppNotificationsEnabled ? "In-app notifications enabled" : "In-app notifications disabled";
+        await JS.InvokeVoidAsync("GameInterop.showNotification", msg, inAppNotificationsEnabled ? "success" : "warning", 2000);
+    }
+
+    private void ToggleNotificationSettings()
+    {
+        showNotificationSettings = !showNotificationSettings;
     }
 
     private void ToggleMobileMenu()

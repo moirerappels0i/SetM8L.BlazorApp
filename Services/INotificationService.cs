@@ -10,4 +10,6 @@ public interface INotificationService
     Task SetEnabled(bool enabled);
     Task<bool> ShowNotification(string title, string body, string? url = null);
     Task<bool> ShowTestNotification(string title, string body);
+    Task<bool> IsInAppEnabled();
+    Task SetInAppEnabled(bool enabled);
 }

@@ -82,7 +82,10 @@
                     {
                         <div class="player-item" data-player-id="@player.Id">
                             <div>
-                                <span class="player-name">@player.Name</span>
+                                <div class="player-name-status">
+                                    <span class="status-dot @GetStatusClass(player.Status)" title="@GetStatusTooltip(player.Status)"></span>
+                                    <span class="player-name">@player.Name</span>
+                                </div>
                                 <div class="margin-bottom-xs">
                                     @if (player.Id == currentPlayerId)
                                     {
@@ -129,14 +132,14 @@
                     </div>
                 }
 
-                <a href="" class="btn btn-outline">
+                <button @onclick="LeaveRoom" class="btn btn-outline">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
                     </svg>
                     Leave Room
-                </a>
+                </button>
             </div>
         </div>
     }
@@ -188,6 +191,8 @@
         {
             // Subscribe to real-time updates
             await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
+            await FirebaseService.SetupPresenceAsync(RoomCode, currentPlayerId);
+            await FirebaseService.UpdatePlayerStatusAsync(RoomCode, currentPlayerId, "active");
             isConnected = true;
             UpdateRoomState();
         }
@@ -335,6 +340,29 @@
             await FirebaseService.UpdateRoomAsync(RoomCode, room);
         }
     }
+
+    private async Task LeaveRoom()
+    {
+        if (room != null)
+        {
+            await FirebaseService.RemovePlayerFromRoomAsync(RoomCode, currentPlayerId);
+        }
+        Navigation.NavigateTo("");
+    }
+
+    private string GetStatusClass(string? status) => status switch
+    {
+        "active" => "status-active",
+        "left" => "status-left",
+        _ => "status-away"
+    };
+
+    private string GetStatusTooltip(string? status) => status switch
+    {
+        "active" => "Online",
+        "left" => "Left the room",
+        _ => "Away"
+    };
 
     public async ValueTask DisposeAsync()
     {

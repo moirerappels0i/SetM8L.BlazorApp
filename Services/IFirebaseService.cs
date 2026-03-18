@@ -23,6 +23,10 @@ namespace SetCardGame.BlazorApp.Services
         Task<bool> AddPlayerToRoomAsync(string roomCode, Player player);
         Task<bool> RemovePlayerFromRoomAsync(string roomCode, string playerId);
 
+        // Player status
+        Task<bool> UpdatePlayerStatusAsync(string roomCode, string playerId, string status);
+        Task SetupPresenceAsync(string roomCode, string playerId);
+
         // Real-time subscription
         Task SubscribeToRoomAsync(string roomCode, Action<MultiplayerGame?> onUpdate);
         Task UnsubscribeFromRoomAsync(string roomCode);

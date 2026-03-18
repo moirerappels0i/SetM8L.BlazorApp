@@ -31,14 +31,14 @@ else
                     <p><strong>Time:</strong> <span id="timer">@GetFormattedTime()</span></p>
                 </div>
                 <div class="game-options">
-                    <a href="" class="btn btn-danger btn-sm">
+                    <button @onclick="LeaveGame" class="btn btn-danger btn-sm">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
                             <line x1="21" y1="12" x2="9" y2="12"></line>
                         </svg>
                         Leave Game
-                    </a>
+                    </button>
                     <button @onclick="ShowThemePopup" class="btn btn-outline btn-sm">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
@@ -85,7 +85,10 @@ else
                         @foreach (var player in room.GetLeaderboard())
                         {
                             <div class="leaderboard-item @(player.Id == currentPlayerId ? "current-player" : "")">
-                                <span class="player-name">@player.Name</span>
+                                <div class="player-name-status">
+                                    <span class="status-dot @GetStatusClass(player.Status)" title="@GetStatusTooltip(player.Status)"></span>
+                                    <span class="player-name">@player.Name</span>
+                                </div>
                                 <span class="player-score">@player.Score</span>
                             </div>
                         }
@@ -142,7 +145,10 @@ else
                     {
                         <div class="leaderboard-item-final @(position == 1 ? "winner" : "")">
                             <span class="position">#@position</span>
-                            <span class="player-name">@player.Name</span>
+                            <span class="player-name-status">
+                                <span class="status-dot @GetStatusClass(player.Status)" title="@GetStatusTooltip(player.Status)"></span>
+                                <span class="player-name">@player.Name</span>
+                            </span>
                             <span class="player-score">@player.Score</span>
                         </div>
                         position++;
@@ -179,6 +185,7 @@ else
     private bool showThemePopup = false;
     private bool showChangeNamePopup = false;
     private System.Threading.Timer? timer;
+    private DotNetObjectReference<PlayGame>? _visibilityRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -191,6 +198,8 @@ else
         if (room != null)
         {
             await FirebaseService.SubscribeToRoomAsync(RoomCode, OnRoomUpdated);
+            await FirebaseService.SetupPresenceAsync(RoomCode, currentPlayerId);
+            await FirebaseService.UpdatePlayerStatusAsync(RoomCode, currentPlayerId, "active");
 
             var player = room.GetPlayer(currentPlayerId);
             if (player != null)
@@ -201,9 +210,21 @@ else
             _previousChatCount = room.ChatLogEntries.Count;
             _previousScores = room.Players.ToDictionary(p => p.Id, p => p.Score);
             StartTimer();
+
+            // Set up visibility change tracking
+            _visibilityRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("GameInterop.setupVisibilityTracking", _visibilityRef);
         }
 
         isLoading = false;
+    }
+
+    [JSInvokable]
+    public async Task OnVisibilityChanged(bool isVisible)
+    {
+        if (string.IsNullOrEmpty(currentPlayerId) || string.IsNullOrEmpty(RoomCode)) return;
+        var status = isVisible ? "active" : "away";
+        await FirebaseService.UpdatePlayerStatusAsync(RoomCode, currentPlayerId, status);
     }
 
     private int _previousChatCount = 0;
@@ -228,15 +249,19 @@ else
             var latestEntry = room.ChatLogEntries.LastOrDefault();
             if (latestEntry != null && latestEntry.PlayerName != currentPlayerName)
             {
+                // Browser push notification (when tab not focused)
                 _ = NotificationService.ShowNotification(
                     $"{latestEntry.PlayerName}",
                     latestEntry.Message,
                     $"play/{RoomCode}");
+
+                // In-app toast (when on the page)
+                _ = ShowInAppToast($"{latestEntry.PlayerName}: {latestEntry.Message}", "info");
             }
         }
         _previousChatCount = room.ChatLogEntries.Count;
 
-        // Notify when another player finds a set
+        // Notify when another player finds a set (browser push only, you can see it on screen)
         foreach (var p in room.Players)
         {
             if (p.Id == currentPlayerId) continue;
@@ -261,6 +286,13 @@ else
         }
 
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ShowInAppToast(string message, string type)
+    {
+        var inAppEnabled = await NotificationService.IsInAppEnabled();
+        if (!inAppEnabled) return;
+        await JS.InvokeVoidAsync("GameInterop.showNotification", message, type, 3000);
     }
 
     private void StartTimer()
@@ -365,6 +397,29 @@ else
         }
     }
 
+    private async Task LeaveGame()
+    {
+        if (room != null)
+        {
+            await FirebaseService.UpdatePlayerStatusAsync(RoomCode, currentPlayerId, "left");
+        }
+        Navigation.NavigateTo("");
+    }
+
+    private string GetStatusClass(string? status) => status switch
+    {
+        "active" => "status-active",
+        "left" => "status-left",
+        _ => "status-away"
+    };
+
+    private string GetStatusTooltip(string? status) => status switch
+    {
+        "active" => "Playing",
+        "left" => "Left the game",
+        _ => "Away"
+    };
+
     private async Task PlayAgain()
     {
         if (room == null) return;
@@ -376,10 +431,11 @@ else
         room.ChatLogEntries.Clear();
         room.StartTime = DateTime.Now;
 
-        // Reset player scores
+        // Reset player scores and statuses
         foreach (var player in room.Players)
         {
             player.Score = 0;
+            player.Status = "active";
         }
 
         // Regenerate deck
@@ -411,6 +467,12 @@ else
     public async ValueTask DisposeAsync()
     {
         timer?.Dispose();
+        _visibilityRef?.Dispose();
+        try
+        {
+            await JS.InvokeVoidAsync("GameInterop.cleanupVisibilityTracking");
+        }
+        catch { }
         await FirebaseService.UnsubscribeFromRoomAsync(RoomCode);
     }
 }

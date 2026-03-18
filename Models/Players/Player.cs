@@ -19,6 +19,12 @@ namespace SetCardGame.BlazorApp.Models.Players
         [JsonPropertyName("joinedAt")]
         public DateTime JoinedAt { get; set; } = DateTime.Now;
 
+        /// <summary>
+        /// Player presence status: "active" (on page), "away" (tab hidden), "left" (clicked Leave Game)
+        /// </summary>
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "active";
+
         public Player() { }
 
         public Player(string id, string name)
@@ -28,6 +34,7 @@ namespace SetCardGame.BlazorApp.Models.Players
             Score = 0;
             IsReady = false;
             JoinedAt = DateTime.Now;
+            Status = "active";
         }
     }
 }

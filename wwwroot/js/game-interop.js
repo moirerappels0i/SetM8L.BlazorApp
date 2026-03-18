@@ -279,6 +279,36 @@ window.GameInterop = {
         // Get user preference
         getEnabled: function () {
             return localStorage.getItem('notifications-enabled') === 'true';
+        },
+
+        // In-app notification preference (toasts while on the page)
+        isInAppEnabled: function () {
+            var pref = localStorage.getItem('notifications-inapp-enabled');
+            // Default to true if not set
+            return pref === null ? true : pref === 'true';
+        },
+
+        setInAppEnabled: function (enabled) {
+            localStorage.setItem('notifications-inapp-enabled', enabled ? 'true' : 'false');
+        }
+    },
+
+    // Visibility tracking for player status
+    setupVisibilityTracking: function (dotNetRef) {
+        window._setm8l_visibilityRef = dotNetRef;
+        window._setm8l_visibilityHandler = function () {
+            if (window._setm8l_visibilityRef) {
+                window._setm8l_visibilityRef.invokeMethodAsync('OnVisibilityChanged', !document.hidden);
+            }
+        };
+        document.addEventListener('visibilitychange', window._setm8l_visibilityHandler);
+    },
+
+    cleanupVisibilityTracking: function () {
+        if (window._setm8l_visibilityHandler) {
+            document.removeEventListener('visibilitychange', window._setm8l_visibilityHandler);
+            delete window._setm8l_visibilityHandler;
+            delete window._setm8l_visibilityRef;
         }
     },
 
